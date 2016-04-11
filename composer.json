@@ -1,0 +1,21 @@
+{
+  "name": "philippbaschke/acf-pro-installer",
+  "description": "An install helper for Advanced Custom Fields PRO",
+  "type": "composer-plugin",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Philipp Baschke",
+      "email": "philipp@baschke.com"
+    }
+  ],
+  "require": {
+    "composer-plugin-api": "^1.0"
+  },
+  "autoload": {
+    "psr-4": { "PhilippBaschke\\ACFProInstaller": "src/ACFProInstaller" }
+  },
+  "extra": {
+    "class": "PhilippBaschke\\ACFProInstaller\\Plugin"
+  }
+}
