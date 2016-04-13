@@ -14,7 +14,8 @@
   },
   "require-dev": {
     "composer/composer": "1.0.*",
-    "phpunit/phpunit": "5.3.*"
+    "phpunit/phpunit": "5.3.*",
+    "squizlabs/php_codesniffer": "2.*"
   },
   "autoload": {
     "psr-4": { "PhilippBaschke\\ACFProInstaller\\": "src/ACFProInstaller" }
@@ -23,6 +24,7 @@
     "class": "PhilippBaschke\\ACFProInstaller\\Plugin"
   },
   "scripts": {
+    "lint": "phpcs src tests --standard=PSR2",
     "test": "phpunit",
     "coverage": "phpunit --coverage-html coverage"
   }
