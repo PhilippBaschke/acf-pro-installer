@@ -15,7 +15,8 @@
   "require-dev": {
     "composer/composer": "1.0.*",
     "phpunit/phpunit": "4.8.*",
-    "squizlabs/php_codesniffer": "2.*"
+    "squizlabs/php_codesniffer": "2.*",
+    "satooshi/php-coveralls": "1.*"
   },
   "autoload": {
     "psr-4": { "PhilippBaschke\\ACFProInstaller\\": "src/ACFProInstaller" }
@@ -26,6 +27,7 @@
   "scripts": {
     "lint": "phpcs src tests --standard=PSR2",
     "test": "phpunit",
-    "coverage": "phpunit --coverage-html coverage"
+    "coverage": "phpunit --coverage-html coverage",
+    "coveralls": "coveralls"
   }
 }
