@@ -1,0 +1,26 @@
+language: php
+
+# Support the same PHP versions as Bedrock
+php:
+  - 7.0
+  - 5.6
+  - 5.5
+  - nightly
+
+# Fails on nightly are good to know but should not break the build
+# fast_finish: Finish when a job fails or only jobs that allow failures are left
+matrix:
+  fast_finish: true
+  allow_failures:
+    - php: nightly
+
+install:
+  - composer install --no-interaction
+
+script:
+  - composer lint
+  - composer test
+
+# No need for email notifications
+notifications:
+  email: false
