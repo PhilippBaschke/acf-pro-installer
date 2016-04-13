@@ -1,0 +1,9 @@
+# composer.lock
+# See: https://getcomposer.org/doc/02-libraries.md#lock-file
+composer.lock
+
+# composer vendor directory
+vendor
+
+# phpunit code coverage report
+coverage

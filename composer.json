@@ -12,10 +12,18 @@
   "require": {
     "composer-plugin-api": "^1.0"
   },
+  "require-dev": {
+    "composer/composer": "1.0.*",
+    "phpunit/phpunit": "5.3.*"
+  },
   "autoload": {
     "psr-4": { "PhilippBaschke\\ACFProInstaller\\": "src/ACFProInstaller" }
   },
   "extra": {
     "class": "PhilippBaschke\\ACFProInstaller\\Plugin"
+  },
+  "scripts": {
+    "test": "phpunit",
+    "coverage": "phpunit --coverage-html coverage"
   }
 }
