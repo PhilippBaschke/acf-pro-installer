@@ -47,8 +47,50 @@ class Plugin implements PluginInterface
     public function activate(Composer $composer, IOInterface $io)
     {
         $config = json_decode(file_get_contents($this->repositoryFile), true);
+        $requiredVersion = $this->getVersion(
+            $config['package']['name'],
+            $composer->getPackage()
+        );
+
+        if (!$requiredVersion) {
+            return;
+        }
+
+        $config['package']['version'] = $requiredVersion;
         $repository = $composer->getRepositoryManager()
                     ->createRepository($config['type'], $config);
         $composer->getRepositoryManager()->prependRepository($repository);
+    }
+
+    /**
+     * Get the required version of a package from the root package
+     *
+     * This function will extract the required version from a package
+     * definition in composer.json.
+     *
+     * E.g: "test/test": "1.2.3" in composer.json => 1.2.3
+     *
+     * @access protected
+     * @param string $package The name of the package
+     * @param Composer\Package\RootPackageInterface A composer root package
+     * @return mixed
+     *   The version of the package from the required packages (if defined) or
+     *   the version of the package from the require-dev packages (if defined).
+     *   false otherwise
+     * @todo
+     *   Consider adding a case when the package is defined in require and
+     *   require-dev (currently returns version from require).
+     */
+    protected function getVersion($package, $rootPackage)
+    {
+        $require = $rootPackage->getRequires();
+        $requireDev = $rootPackage->getDevRequires();
+
+        if (isset($require[$package])) {
+            return $require[$package]->getPrettyConstraint();
+        } elseif (isset($requireDev[$package])) {
+            return $requireDev[$package]->getPrettyConstraint();
+        }
+        return false;
     }
 }
