@@ -28,12 +28,25 @@ class Plugin implements PluginInterface
      *
      * It is based on the recommended approach from the ACF support forum.
      * @url https://gist.github.com/dmalatesta/4fae4490caef712a51bf
+     *
+     * @access protected
+     * @var string
      */
-    const REPOSITORY_FILE = __DIR__ . '/repository.json';
+    protected $repositoryFile;
+
+    /**
+     * Constructor
+     *
+     * Set up the path to the repository file when the Plugin is created.
+     */
+    public function __construct()
+    {
+        $this->repositoryFile = __DIR__.DIRECTORY_SEPARATOR.'repository.json';
+    }
 
     public function activate(Composer $composer, IOInterface $io)
     {
-        $config = json_decode(file_get_contents(self::REPOSITORY_FILE), true);
+        $config = json_decode(file_get_contents($this->repositoryFile), true);
         $repository = $composer->getRepositoryManager()
                     ->createRepository($config['type'], $config);
         $composer->getRepositoryManager()->prependRepository($repository);
