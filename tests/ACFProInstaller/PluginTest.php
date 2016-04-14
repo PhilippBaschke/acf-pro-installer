@@ -370,4 +370,155 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         $plugin = new Plugin();
         $plugin->activate($composer, $io);
     }
+
+    public function testExactVersionPassesValidation()
+    {
+        // The version that should be required
+        $version = '1.2.3';
+
+        // Mock a Link (returned by getRequires)
+        $link = $this->getMockBuilder('Composer\Package\Link')
+              ->disableOriginalConstructor()
+              ->setMethods(['getPrettyConstraint'])
+              ->getMock();
+
+        $link
+            ->method('getPrettyConstraint')
+            ->willReturn($version);
+
+        // Mock a RootPackageInterface (returned by getPackage)
+        $rootPackageInterface = $this
+                              ->getMockBuilder(
+                                  'Composer\Package\RootPackageInterface'
+                              )
+                              ->setMethods(['getRequires'])
+                              ->getMockForAbstractClass();
+
+        $rootPackageInterface
+            ->method('getRequires')
+            ->willReturn([self::REPO_NAME => $link]);
+
+        // Mock a RepositoryInterface (returned by createRepository)
+        $repositoryInterface = $this
+                             ->getMockBuilder(
+                                 'Composer\Repository\RepositoryInterface'
+                             )
+                             ->getMock();
+
+        // Mock a RepositoryManager
+        $repositoryManager = $this
+                           ->getMockBuilder(
+                               'Composer\Repository\RepositoryManager'
+                           )
+                           ->disableOriginalConstructor()
+                           ->setMethods(['createRepository'])
+                           ->getMock();
+
+        $repositoryManager
+            ->expects($this->once())
+            ->method('createRepository')
+            ->willReturn($repositoryInterface);
+
+        // Mock Composer
+        $composer = $this
+                  ->getMockBuilder('Composer\Composer')
+                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->getMock();
+
+        $composer
+            ->method('getRepositoryManager')
+            ->willReturn($repositoryManager);
+
+        $composer->method('getPackage')->willReturn($rootPackageInterface);
+
+        // Mock IOInterface
+        $io = $this
+            ->getMockBuilder('Composer\IO\IOInterface')
+            ->getMock();
+
+        // Activate Plugin
+        $plugin = new Plugin();
+        $plugin->activate($composer, $io);
+    }
+
+    protected function versionFailsValidationHelper($version)
+    {
+        // Expect an Exception
+        $this->setExpectedException(
+            'UnexpectedValueException',
+            'The version constraint of ' . self::REPO_NAME .
+            ' should be exact (with 3 digits). ' .
+            'Invalid version string "' . $version . '"'
+        );
+
+        // Mock a Link (returned by getRequires)
+        $link = $this->getMockBuilder('Composer\Package\Link')
+              ->disableOriginalConstructor()
+              ->setMethods(['getPrettyConstraint'])
+              ->getMock();
+
+        $link
+            ->method('getPrettyConstraint')
+            ->willReturn($version);
+
+        // Mock a RootPackageInterface (returned by getPackage)
+        $rootPackageInterface = $this
+                              ->getMockBuilder(
+                                  'Composer\Package\RootPackageInterface'
+                              )
+                              ->setMethods(['getRequires'])
+                              ->getMockForAbstractClass();
+
+        $rootPackageInterface
+            ->method('getRequires')
+            ->willReturn([self::REPO_NAME => $link]);
+
+        // Mock Composer
+        $composer = $this
+                  ->getMockBuilder('Composer\Composer')
+                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->getMock();
+
+        $composer->expects($this->never())->method('getRepositoryManager');
+        $composer->method('getPackage')->willReturn($rootPackageInterface);
+
+        // Mock IOInterface
+        $io = $this
+            ->getMockBuilder('Composer\IO\IOInterface')
+            ->getMock();
+
+        // Activate Plugin
+        $plugin = new Plugin();
+        $plugin->activate($composer, $io);
+    }
+
+    public function testRangeVersionFailsValidation()
+    {
+        $this->versionFailsValidationHelper('>=1.0');
+    }
+
+    public function testRangeHyphenVersionFailsValidation()
+    {
+        $this->versionFailsValidationHelper('1.0 - 2.0');
+    }
+
+    public function testWildcardVersionFailsValidation()
+    {
+        $this->versionFailsValidationHelper('1.0.*');
+    }
+
+    public function testTildeVersionFailsValidation()
+    {
+        $this->versionFailsValidationHelper('~1.2.3');
+    }
+
+    public function testCaretVersionFailsValidation()
+    {
+        $this->versionFailsValidationHelper('^1.2.3');
+    }
+
+    public function testExactVersionWithout3DigitsFailsValidation()
+    {
+        $this->versionFailsValidationHelper('1.2');
+    }
 }

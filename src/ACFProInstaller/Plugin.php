@@ -56,6 +56,7 @@ class Plugin implements PluginInterface
             return;
         }
 
+        $this->validateVersion($requiredVersion);
         $config['package']['version'] = $requiredVersion;
         $repository = $composer->getRepositoryManager()
                     ->createRepository($config['type'], $config);
@@ -92,5 +93,31 @@ class Plugin implements PluginInterface
             return $requireDev[$package]->getPrettyConstraint();
         }
         return false;
+    }
+
+    /**
+     * Validate that the version is an exact major.minor.patch version
+     *
+     * The url to download the code for the package only works with exact
+     * version numbers with 3 digits: e.g. 1.2.3
+     *
+     * @access protected
+     * @param string $version The version that should be validated
+     * @throws UnexpectedValueException
+     */
+    protected function validateVersion($version)
+    {
+        // \A = start of string, \Z = end of string
+        // See: http://stackoverflow.com/a/34994075
+        $major_minor_patch = '/\A\d\.\d\.\d\Z/';
+
+        if (!preg_match($major_minor_patch, $version)) {
+            throw new \UnexpectedValueException(
+                'The version constraint of advanced-custom-fields/' .
+                'advanced-custom-fields-pro' .
+                ' should be exact (with 3 digits). ' .
+                'Invalid version string "' . $version . '"'
+            );
+        }
     }
 }
