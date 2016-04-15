@@ -188,32 +188,24 @@ class Plugin implements PluginInterface
     protected function updateConfig($version, $key)
     {
         $this->config['package']['version'] = $version;
-        $this->config['package']['dist']['url'] = $this->addParameterToUrl(
-            $this->config['package']['dist']['url'],
-            't',
-            $version
-        );
-        $this->config['package']['dist']['url'] = $this->addParameterToUrl(
-            $this->config['package']['dist']['url'],
-            'k',
-            $key
-        );
+        $this->addParameterToUrl('t', $version);
+        $this->addParameterToUrl('k', $key);
     }
+
     /**
-     * Add a parameter to a given url
+     * Add a parameter to the dist url
      *
-     * Adds the given parameter at the end of the url. It only works with
+     * Adds the given parameter at the end of the dist url. It only works with
      * urls that already have parameters (e.g. test.com?p=true) because it
      * uses & as a separation character.
      *
      * @access protected
-     * @param string $url A url with parameters
      * @param string $parameter The name of the parameter
      * @param string $value The value of the parameter
-     * @return string The url with &parameter=value appended
      */
-    protected function addParameterToUrl($url, $parameter, $value)
+    protected function addParameterToUrl($parameter, $value)
     {
-        return $url . '&' . $parameter . '=' . urlencode($value);
+        $urlParameter = '&' . $parameter . '=' . urlencode($value);
+        $this->config['package']['dist']['url'] .= $urlParameter;
     }
 }
