@@ -8,6 +8,20 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     const REPO_TYPE = 'wordpress-plugin';
     const REPO_URL =
       'https://connect.advancedcustomfields.com/index.php?p=pro&a=download';
+    const KEY_ENV_VARIABLE = 'ACF_PRO_KEY';
+
+    protected function tearDown()
+    {
+        // Unset the environment variable after every test
+        // See: http://stackoverflow.com/a/34065522
+        putenv(self::KEY_ENV_VARIABLE);
+
+        // Delete the .env file
+        $dotenv = getcwd().DIRECTORY_SEPARATOR.'.env';
+        if (file_exists($dotenv)) {
+            unlink($dotenv);
+        }
+    }
 
     public function testImplementsPluginInterface()
     {
@@ -19,6 +33,9 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
     public function testCreatePackageRepository()
     {
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
         // Mock a Link (return by getRequires)
         $link = $this->getMockBuilder('Composer\Package\Link')
               ->disableOriginalConstructor()
@@ -100,6 +117,9 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
     public function testPrependRepository()
     {
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
         // Mock a Link (return by getRequires)
         $link = $this->getMockBuilder('Composer\Package\Link')
               ->disableOriginalConstructor()
@@ -222,6 +242,9 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         // The version that should be required
         $version = '1.2.3';
 
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
         // Mock a Link (returned by getRequires)
         $link = $this->getMockBuilder('Composer\Package\Link')
               ->disableOriginalConstructor()
@@ -299,6 +322,9 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         // The version that should be required
         $version = '1.2.3';
 
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
         // Mock a Link (returned by getDevRequires)
         $link = $this->getMockBuilder('Composer\Package\Link')
               ->disableOriginalConstructor()
@@ -375,6 +401,9 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     {
         // The version that should be required
         $version = '1.2.3';
+
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
 
         // Mock a Link (returned by getRequires)
         $link = $this->getMockBuilder('Composer\Package\Link')
@@ -527,6 +556,9 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         // The version that should be added to the url
         $version = '1.2.3';
 
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
         // Mock a Link (return by getRequires)
         $link = $this->getMockBuilder('Composer\Package\Link')
               ->disableOriginalConstructor()
@@ -587,6 +619,305 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->method('getRepositoryManager')
             ->willReturn($repositoryManager);
 
+        $composer->method('getPackage')->willReturn($rootPackageInterface);
+
+        // Mock IOInterface
+        $io = $this
+            ->getMockBuilder('Composer\IO\IOInterface')
+            ->getMock();
+
+        // Activate Plugin
+        $plugin = new Plugin();
+        $plugin->activate($composer, $io);
+    }
+
+    public function testAddKeyFromENVToDistUrl()
+    {
+        // The key that should be available in the ENVIRONMENT
+        $key = 'ENV_KEY';
+
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=' . $key);
+
+        // Mock a Link (return by getRequires)
+        $link = $this->getMockBuilder('Composer\Package\Link')
+              ->disableOriginalConstructor()
+              ->getMock();
+
+        $link->method('getPrettyConstraint')->willReturn('1.2.3');
+
+        // Mock a RootPackageInterface (returned by getPackage)
+        $rootPackageInterface = $this
+                              ->getMockBuilder(
+                                  'Composer\Package\RootPackageInterface'
+                              )
+                              ->setMethods(['getRequires'])
+                              ->getMockForAbstractClass();
+
+        $rootPackageInterface
+            ->method('getRequires')
+            ->willReturn([self::REPO_NAME => $link]);
+
+        // Mock a RepositoryInterface (returned by createRepository)
+        $repositoryInterface = $this
+                             ->getMockBuilder(
+                                 'Composer\Repository\RepositoryInterface'
+                             )
+                             ->getMock();
+
+        // Mock a RepositoryManager
+        $repositoryManager = $this
+                           ->getMockBuilder(
+                               'Composer\Repository\RepositoryManager'
+                           )
+                           ->disableOriginalConstructor()
+                           ->setMethods(['createRepository'])
+                           ->getMock();
+
+        $repositoryManager
+            ->expects($this->once())
+            ->method('createRepository')
+            ->with(
+                $this->anything(),
+                $this->callback(function ($config) use ($key) {
+                    return strpos(
+                        $config['package']['dist']['url'],
+                        '&k='.$key
+                    ) !== false;
+                })
+            )
+            ->willReturn($repositoryInterface);
+
+        // Mock Composer (returns the mocked RepositoryManager)
+        $composer = $this
+                  ->getMockBuilder('Composer\Composer')
+                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->getMock();
+
+        $composer
+            ->expects($this->atLeast(1))
+            ->method('getRepositoryManager')
+            ->willReturn($repositoryManager);
+
+        $composer->method('getPackage')->willReturn($rootPackageInterface);
+
+        // Mock IOInterface
+        $io = $this
+            ->getMockBuilder('Composer\IO\IOInterface')
+            ->getMock();
+
+        // Activate Plugin
+        $plugin = new Plugin();
+        $plugin->activate($composer, $io);
+    }
+
+    public function testAddKeyFromDotEnvToDistUrl()
+    {
+        // The key that should be available in the .env file
+        $key = 'DOT_ENV_KEY';
+
+        // Make key available in the .env file
+        file_put_contents(
+            getcwd().DIRECTORY_SEPARATOR.'.env',
+            self::KEY_ENV_VARIABLE . '=' . $key
+        );
+
+        // Mock a Link (return by getRequires)
+        $link = $this->getMockBuilder('Composer\Package\Link')
+              ->disableOriginalConstructor()
+              ->getMock();
+
+        $link->method('getPrettyConstraint')->willReturn('1.2.3');
+
+        // Mock a RootPackageInterface (returned by getPackage)
+        $rootPackageInterface = $this
+                              ->getMockBuilder(
+                                  'Composer\Package\RootPackageInterface'
+                              )
+                              ->setMethods(['getRequires'])
+                              ->getMockForAbstractClass();
+
+        $rootPackageInterface
+            ->method('getRequires')
+            ->willReturn([self::REPO_NAME => $link]);
+
+        // Mock a RepositoryInterface (returned by createRepository)
+        $repositoryInterface = $this
+                             ->getMockBuilder(
+                                 'Composer\Repository\RepositoryInterface'
+                             )
+                             ->getMock();
+
+        // Mock a RepositoryManager
+        $repositoryManager = $this
+                           ->getMockBuilder(
+                               'Composer\Repository\RepositoryManager'
+                           )
+                           ->disableOriginalConstructor()
+                           ->setMethods(['createRepository'])
+                           ->getMock();
+
+        $repositoryManager
+            ->expects($this->once())
+            ->method('createRepository')
+            ->with(
+                $this->anything(),
+                $this->callback(function ($config) use ($key) {
+                    return strpos(
+                        $config['package']['dist']['url'],
+                        '&k='.$key
+                    ) !== false;
+                })
+            )
+            ->willReturn($repositoryInterface);
+
+        // Mock Composer (returns the mocked RepositoryManager)
+        $composer = $this
+                  ->getMockBuilder('Composer\Composer')
+                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->getMock();
+
+        $composer
+            ->expects($this->atLeast(1))
+            ->method('getRepositoryManager')
+            ->willReturn($repositoryManager);
+
+        $composer->method('getPackage')->willReturn($rootPackageInterface);
+
+        // Mock IOInterface
+        $io = $this
+            ->getMockBuilder('Composer\IO\IOInterface')
+            ->getMock();
+
+        // Activate Plugin
+        $plugin = new Plugin();
+        $plugin->activate($composer, $io);
+    }
+
+    public function testPreferKeyFromEnv()
+    {
+        // The key that should be available in the .env file
+        $fileKey = 'DOT_ENV_KEY';
+        $key = 'ENV_KEY';
+
+        // Make key available in the .env file
+        file_put_contents(
+            getcwd().DIRECTORY_SEPARATOR.'.env',
+            self::KEY_ENV_VARIABLE . '=' . $fileKey
+        );
+
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=' . $key);
+
+        // Mock a Link (return by getRequires)
+        $link = $this->getMockBuilder('Composer\Package\Link')
+              ->disableOriginalConstructor()
+              ->getMock();
+
+        $link->method('getPrettyConstraint')->willReturn('1.2.3');
+
+        // Mock a RootPackageInterface (returned by getPackage)
+        $rootPackageInterface = $this
+                              ->getMockBuilder(
+                                  'Composer\Package\RootPackageInterface'
+                              )
+                              ->setMethods(['getRequires'])
+                              ->getMockForAbstractClass();
+
+        $rootPackageInterface
+            ->method('getRequires')
+            ->willReturn([self::REPO_NAME => $link]);
+
+        // Mock a RepositoryInterface (returned by createRepository)
+        $repositoryInterface = $this
+                             ->getMockBuilder(
+                                 'Composer\Repository\RepositoryInterface'
+                             )
+                             ->getMock();
+
+        // Mock a RepositoryManager
+        $repositoryManager = $this
+                           ->getMockBuilder(
+                               'Composer\Repository\RepositoryManager'
+                           )
+                           ->disableOriginalConstructor()
+                           ->setMethods(['createRepository'])
+                           ->getMock();
+
+        $repositoryManager
+            ->expects($this->once())
+            ->method('createRepository')
+            ->with(
+                $this->anything(),
+                $this->callback(function ($config) use ($key) {
+                    return strpos(
+                        $config['package']['dist']['url'],
+                        '&k='.$key
+                    ) !== false;
+                })
+            )
+            ->willReturn($repositoryInterface);
+
+        // Mock Composer (returns the mocked RepositoryManager)
+        $composer = $this
+                  ->getMockBuilder('Composer\Composer')
+                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->getMock();
+
+        $composer
+            ->expects($this->atLeast(1))
+            ->method('getRepositoryManager')
+            ->willReturn($repositoryManager);
+
+        $composer->method('getPackage')->willReturn($rootPackageInterface);
+
+        // Mock IOInterface
+        $io = $this
+            ->getMockBuilder('Composer\IO\IOInterface')
+            ->getMock();
+
+        // Activate Plugin
+        $plugin = new Plugin();
+        $plugin->activate($composer, $io);
+    }
+
+    public function testThrowExceptionWhenKeyIsMissing()
+    {
+        // Expect an Exception
+        $this->setExpectedException(
+            'PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException',
+            'ACF_PRO_KEY'
+        );
+
+        // Mock a Link (returned by getRequires)
+        $link = $this->getMockBuilder('Composer\Package\Link')
+              ->disableOriginalConstructor()
+              ->setMethods(['getPrettyConstraint'])
+              ->getMock();
+
+        $link
+            ->method('getPrettyConstraint')
+            ->willReturn('1.2.3');
+
+        // Mock a RootPackageInterface (returned by getPackage)
+        $rootPackageInterface = $this
+                              ->getMockBuilder(
+                                  'Composer\Package\RootPackageInterface'
+                              )
+                              ->setMethods(['getRequires'])
+                              ->getMockForAbstractClass();
+
+        $rootPackageInterface
+            ->method('getRequires')
+            ->willReturn([self::REPO_NAME => $link]);
+
+        // Mock Composer
+        $composer = $this
+                  ->getMockBuilder('Composer\Composer')
+                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->getMock();
+
+        $composer->expects($this->never())->method('getRepositoryManager');
         $composer->method('getPackage')->willReturn($rootPackageInterface);
 
         // Mock IOInterface

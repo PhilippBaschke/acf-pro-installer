@@ -10,7 +10,8 @@
     }
   ],
   "require": {
-    "composer-plugin-api": "^1.0"
+    "composer-plugin-api": "^1.0",
+    "vlucas/phpdotenv": "^2.2"
   },
   "require-dev": {
     "composer/composer": "1.0.*",

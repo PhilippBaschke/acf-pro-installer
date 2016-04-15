@@ -3,6 +3,8 @@
 use Composer\Composer;
 use Composer\IO\IOInterface;
 use Composer\Plugin\PluginInterface;
+use Dotenv\Dotenv;
+use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException;
 
 /**
  * A composer plugin that adds a repository for ACF PRO
@@ -19,6 +21,12 @@ use Composer\Plugin\PluginInterface;
  */
 class Plugin implements PluginInterface
 {
+    /**
+     * The name of the environment variable
+     * where the ACF PRO key should be stored.
+     */
+    const KEY_ENV_VARIABLE = 'ACF_PRO_KEY';
+
     /**
      * Path to file that contains the repository definition for ACF PRO
      *
@@ -62,6 +70,11 @@ class Plugin implements PluginInterface
             $config['package']['dist']['url'],
             't',
             $requiredVersion
+        );
+        $config['package']['dist']['url'] = $this->addParameterToUrl(
+            $config['package']['dist']['url'],
+            'k',
+            $this->getKeyFromEnv()
         );
         $repository = $composer->getRepositoryManager()
                     ->createRepository($config['type'], $config);
@@ -123,6 +136,45 @@ class Plugin implements PluginInterface
                 ' should be exact (with 3 digits). ' .
                 'Invalid version string "' . $version . '"'
             );
+        }
+    }
+
+    /**
+     * Get the ACF PRO key from the environment
+     *
+     * Loads the .env file that is in the same directory as composer.json
+     * and gets the key from the environment variable KEY_ENV_VARIABLE.
+     * Already set variables will not be overwritten by the variables in .env
+     * @url https://github.com/vlucas/phpdotenv#immutability
+     *
+     * @access protected
+     * @return string The key from the environment
+     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException
+     */
+    protected function getKeyFromEnv()
+    {
+        $this->loadDotEnv();
+        $key = getenv(self::KEY_ENV_VARIABLE);
+
+        if (!$key) {
+            throw new MissingKeyException(self::KEY_ENV_VARIABLE);
+        }
+
+        return $key;
+    }
+
+    /**
+     * Make environment variables in .env available if .env exists
+     *
+     * getcwd() returns the directory of composer.json.
+     *
+     * @access protected
+     */
+    protected function loadDotEnv()
+    {
+        if (file_exists(getcwd().DIRECTORY_SEPARATOR.'.env')) {
+            $dotenv = new Dotenv(getcwd());
+            $dotenv->load();
         }
     }
 
