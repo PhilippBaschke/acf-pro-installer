@@ -60,18 +60,10 @@ class Plugin implements PluginInterface
         if (!$requiredVersion) {
             return;
         }
+        $key = $this->getKeyFromEnv();
 
-        $this->config['package']['version'] = $requiredVersion;
-        $this->config['package']['dist']['url'] = $this->addParameterToUrl(
-            $this->config['package']['dist']['url'],
-            't',
-            $requiredVersion
-        );
-        $this->config['package']['dist']['url'] = $this->addParameterToUrl(
-            $this->config['package']['dist']['url'],
-            'k',
-            $this->getKeyFromEnv()
-        );
+        $this->updateConfig($requiredVersion, $key);
+
         $repository = $composer->getRepositoryManager()
                     ->createRepository($this->config['type'], $this->config);
         $composer->getRepositoryManager()->prependRepository($repository);
@@ -183,6 +175,30 @@ class Plugin implements PluginInterface
         }
     }
 
+    /**
+     * Update the version and the key of the config
+     *
+     * The package version needs to match the required version and the dist url
+     * needs to include the version and key as a parameter.
+     *
+     * @access protected
+     * @param string The required version
+     * @param string The ACF PRO license key
+     */
+    protected function updateConfig($version, $key)
+    {
+        $this->config['package']['version'] = $version;
+        $this->config['package']['dist']['url'] = $this->addParameterToUrl(
+            $this->config['package']['dist']['url'],
+            't',
+            $version
+        );
+        $this->config['package']['dist']['url'] = $this->addParameterToUrl(
+            $this->config['package']['dist']['url'],
+            'k',
+            $key
+        );
+    }
     /**
      * Add a parameter to a given url
      *
