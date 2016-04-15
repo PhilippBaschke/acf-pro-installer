@@ -9,7 +9,11 @@
       "email": "philipp@baschke.com"
     }
   ],
+  "keywords": [
+    "wordpress", "composer", "wp", "plugin", "acf", "env", "pro"
+  ],
   "require": {
+    "php": ">=5.5",
     "composer-plugin-api": "^1.0",
     "vlucas/phpdotenv": "^2.2"
   },
