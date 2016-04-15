@@ -56,16 +56,12 @@ class Plugin implements PluginInterface
 
     public function activate(Composer $composer, IOInterface $io)
     {
-        $requiredVersion = $this->getVersion(
-            $this->config['package']['name'],
-            $composer->getPackage()
-        );
-
+        $requiredVersion = $this->getVersion($composer->getPackage());
         if (!$requiredVersion) {
             return;
         }
-
         $this->validateVersion($requiredVersion);
+
         $this->config['package']['version'] = $requiredVersion;
         $this->config['package']['dist']['url'] = $this->addParameterToUrl(
             $this->config['package']['dist']['url'],
@@ -91,7 +87,6 @@ class Plugin implements PluginInterface
      * E.g: "test/test": "1.2.3" in composer.json => 1.2.3
      *
      * @access protected
-     * @param string $package The name of the package
      * @param Composer\Package\RootPackageInterface A composer root package
      * @return mixed
      *   The version of the package from the required packages (if defined) or
@@ -101,8 +96,9 @@ class Plugin implements PluginInterface
      *   Consider adding a case when the package is defined in require and
      *   require-dev (currently returns version from require).
      */
-    protected function getVersion($package, $rootPackage)
+    protected function getVersion($rootPackage)
     {
+        $package = $this->config['package']['name'];
         $require = $rootPackage->getRequires();
         $requireDev = $rootPackage->getDevRequires();
 
