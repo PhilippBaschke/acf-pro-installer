@@ -28,8 +28,9 @@ class Plugin implements PluginInterface
     const KEY_ENV_VARIABLE = 'ACF_PRO_KEY';
 
     /**
-     * Path to file that contains the repository definition for ACF PRO
+     * The repository definition for ACF PRO
      *
+     * The definition is loaded from repository.json.
      * This file contains a repository definition that would normally be used
      * in the repositories attribute in composer.json.
      * @url https://getcomposer.org/doc/04-schema.md#repositories
@@ -38,25 +39,25 @@ class Plugin implements PluginInterface
      * @url https://gist.github.com/dmalatesta/4fae4490caef712a51bf
      *
      * @access protected
-     * @var string
+     * @var array
      */
-    protected $repositoryFile;
+    protected $config;
 
     /**
      * Constructor
      *
-     * Set up the path to the repository file when the Plugin is created.
+     * Load the repository file when the Plugin is created.
      */
     public function __construct()
     {
-        $this->repositoryFile = __DIR__.DIRECTORY_SEPARATOR.'repository.json';
+        $repositoryFile = __DIR__.DIRECTORY_SEPARATOR.'repository.json';
+        $this->config = json_decode(file_get_contents($repositoryFile), true);
     }
 
     public function activate(Composer $composer, IOInterface $io)
     {
-        $config = json_decode(file_get_contents($this->repositoryFile), true);
         $requiredVersion = $this->getVersion(
-            $config['package']['name'],
+            $this->config['package']['name'],
             $composer->getPackage()
         );
 
@@ -65,19 +66,19 @@ class Plugin implements PluginInterface
         }
 
         $this->validateVersion($requiredVersion);
-        $config['package']['version'] = $requiredVersion;
-        $config['package']['dist']['url'] = $this->addParameterToUrl(
-            $config['package']['dist']['url'],
+        $this->config['package']['version'] = $requiredVersion;
+        $this->config['package']['dist']['url'] = $this->addParameterToUrl(
+            $this->config['package']['dist']['url'],
             't',
             $requiredVersion
         );
-        $config['package']['dist']['url'] = $this->addParameterToUrl(
-            $config['package']['dist']['url'],
+        $this->config['package']['dist']['url'] = $this->addParameterToUrl(
+            $this->config['package']['dist']['url'],
             'k',
             $this->getKeyFromEnv()
         );
         $repository = $composer->getRepositoryManager()
-                    ->createRepository($config['type'], $config);
+                    ->createRepository($this->config['type'], $this->config);
         $composer->getRepositoryManager()->prependRepository($repository);
     }
 
