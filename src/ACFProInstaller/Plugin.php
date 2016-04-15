@@ -33,10 +33,10 @@ class Plugin implements PluginInterface
      * The definition is loaded from repository.json.
      * This file contains a repository definition that would normally be used
      * in the repositories attribute in composer.json.
-     * @url https://getcomposer.org/doc/04-schema.md#repositories
+     * @link https://getcomposer.org/doc/04-schema.md#repositories
      *
      * It is based on the recommended approach from the ACF support forum.
-     * @url https://gist.github.com/dmalatesta/4fae4490caef712a51bf
+     * @link https://gist.github.com/dmalatesta/4fae4490caef712a51bf
      *
      * @access protected
      * @var array
@@ -87,7 +87,8 @@ class Plugin implements PluginInterface
      * E.g: "test/test": "1.2.3" in composer.json => 1.2.3
      *
      * @access protected
-     * @param Composer\Package\RootPackageInterface A composer root package
+     * @param Composer\Package\RootPackageInterface
+     *   $rootPackage A composer root package
      * @return mixed
      *   The version of the package from the required packages (if defined) or
      *   the version of the package from the require-dev packages (if defined).
@@ -142,7 +143,7 @@ class Plugin implements PluginInterface
      * Loads the .env file that is in the same directory as composer.json
      * and gets the key from the environment variable KEY_ENV_VARIABLE.
      * Already set variables will not be overwritten by the variables in .env
-     * @url https://github.com/vlucas/phpdotenv#immutability
+     * @link https://github.com/vlucas/phpdotenv#immutability
      *
      * @access protected
      * @return string The key from the environment
