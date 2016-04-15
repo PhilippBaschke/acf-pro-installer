@@ -60,7 +60,6 @@ class Plugin implements PluginInterface
         if (!$requiredVersion) {
             return;
         }
-        $this->validateVersion($requiredVersion);
 
         $this->config['package']['version'] = $requiredVersion;
         $this->config['package']['dist']['url'] = $this->addParameterToUrl(
@@ -93,6 +92,7 @@ class Plugin implements PluginInterface
      *   The version of the package from the required packages (if defined) or
      *   the version of the package from the require-dev packages (if defined).
      *   false otherwise
+     * @throws UnexpectedValueException
      * @todo
      *   Consider adding a case when the package is defined in require and
      *   require-dev (currently returns version from require).
@@ -100,14 +100,18 @@ class Plugin implements PluginInterface
     protected function getVersion($rootPackage)
     {
         $package = $this->config['package']['name'];
-        $require = $rootPackage->getRequires();
-        $requireDev = $rootPackage->getDevRequires();
+        $requires = [
+            $rootPackage->getRequires(),
+            $rootPackage->getDevRequires()
+        ];
 
-        if (isset($require[$package])) {
-            return $require[$package]->getPrettyConstraint();
-        } elseif (isset($requireDev[$package])) {
-            return $requireDev[$package]->getPrettyConstraint();
+        foreach ($requires as $require) {
+            if (isset($require[$package])) {
+                $version = $require[$package]->getPrettyConstraint();
+                return $this->validateVersion($version);
+            }
         }
+
         return false;
     }
 
@@ -119,6 +123,7 @@ class Plugin implements PluginInterface
      *
      * @access protected
      * @param string $version The version that should be validated
+     * @return string The valid version
      * @throws UnexpectedValueException
      */
     protected function validateVersion($version)
@@ -135,6 +140,8 @@ class Plugin implements PluginInterface
                 'Invalid version string "' . $version . '"'
             );
         }
+
+        return $version;
     }
 
     /**
