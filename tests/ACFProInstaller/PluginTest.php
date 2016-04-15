@@ -521,4 +521,81 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     {
         $this->versionFailsValidationHelper('1.2');
     }
+
+    public function testAddVersionToDistUrl()
+    {
+        // The version that should be added to the url
+        $version = '1.2.3';
+
+        // Mock a Link (return by getRequires)
+        $link = $this->getMockBuilder('Composer\Package\Link')
+              ->disableOriginalConstructor()
+              ->getMock();
+
+        $link->method('getPrettyConstraint')->willReturn($version);
+
+        // Mock a RootPackageInterface (returned by getPackage)
+        $rootPackageInterface = $this
+                              ->getMockBuilder(
+                                  'Composer\Package\RootPackageInterface'
+                              )
+                              ->setMethods(['getRequires'])
+                              ->getMockForAbstractClass();
+
+        $rootPackageInterface
+            ->method('getRequires')
+            ->willReturn([self::REPO_NAME => $link]);
+
+        // Mock a RepositoryInterface (returned by createRepository)
+        $repositoryInterface = $this
+                             ->getMockBuilder(
+                                 'Composer\Repository\RepositoryInterface'
+                             )
+                             ->getMock();
+
+        // Mock a RepositoryManager
+        $repositoryManager = $this
+                           ->getMockBuilder(
+                               'Composer\Repository\RepositoryManager'
+                           )
+                           ->disableOriginalConstructor()
+                           ->setMethods(['createRepository'])
+                           ->getMock();
+
+        $repositoryManager
+            ->expects($this->once())
+            ->method('createRepository')
+            ->with(
+                $this->anything(),
+                $this->callback(function ($config) use ($version) {
+                    return strpos(
+                        $config['package']['dist']['url'],
+                        '&t='.$version
+                    ) !== false;
+                })
+            )
+            ->willReturn($repositoryInterface);
+
+        // Mock Composer (returns the mocked RepositoryManager)
+        $composer = $this
+                  ->getMockBuilder('Composer\Composer')
+                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->getMock();
+
+        $composer
+            ->expects($this->atLeast(1))
+            ->method('getRepositoryManager')
+            ->willReturn($repositoryManager);
+
+        $composer->method('getPackage')->willReturn($rootPackageInterface);
+
+        // Mock IOInterface
+        $io = $this
+            ->getMockBuilder('Composer\IO\IOInterface')
+            ->getMock();
+
+        // Activate Plugin
+        $plugin = new Plugin();
+        $plugin->activate($composer, $io);
+    }
 }

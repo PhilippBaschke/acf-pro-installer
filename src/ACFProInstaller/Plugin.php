@@ -58,6 +58,11 @@ class Plugin implements PluginInterface
 
         $this->validateVersion($requiredVersion);
         $config['package']['version'] = $requiredVersion;
+        $config['package']['dist']['url'] = $this->addParameterToUrl(
+            $config['package']['dist']['url'],
+            't',
+            $requiredVersion
+        );
         $repository = $composer->getRepositoryManager()
                     ->createRepository($config['type'], $config);
         $composer->getRepositoryManager()->prependRepository($repository);
@@ -119,5 +124,23 @@ class Plugin implements PluginInterface
                 'Invalid version string "' . $version . '"'
             );
         }
+    }
+
+    /**
+     * Add a parameter to a given url
+     *
+     * Adds the given parameter at the end of the url. It only works with
+     * urls that already have parameters (e.g. test.com?p=true) because it
+     * uses & as a separation character.
+     *
+     * @access protected
+     * @param string $url A url with parameters
+     * @param string $parameter The name of the parameter
+     * @param string $value The value of the parameter
+     * @return string The url with &parameter=value appended
+     */
+    protected function addParameterToUrl($url, $parameter, $value)
+    {
+        return $url . '&' . $parameter . '=' . urlencode($value);
     }
 }
