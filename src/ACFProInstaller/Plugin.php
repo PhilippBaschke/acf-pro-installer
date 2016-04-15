@@ -47,6 +47,8 @@ class Plugin implements PluginInterface
      * Constructor
      *
      * Load the repository file when the Plugin is created.
+     *
+     * @access public
      */
     public function __construct()
     {
