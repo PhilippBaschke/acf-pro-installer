@@ -54,6 +54,19 @@ class Plugin implements PluginInterface
         $this->config = json_decode(file_get_contents($repositoryFile), true);
     }
 
+    /**
+     * The function that is called when the plugin is activated
+     *
+     * This function provides the main functionality of this plugin. It gets
+     * the version from composer.json, the key from the environment and adds
+     * the repository to composer (if all prerequisites are fulfilled).
+     *
+     * @access public
+     * @param Composer\Composer $composer The composer object
+     * @param Composer\IOInterface $io Not used
+     * @throws UnexpectedValueException
+     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException
+     */
     public function activate(Composer $composer, IOInterface $io)
     {
         $requiredVersion = $this->getVersion($composer->getPackage());
