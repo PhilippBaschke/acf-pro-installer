@@ -59,7 +59,7 @@ class RemoteFilesystem extends \Composer\Util\RemoteFilesystem
         $progress = true,
         $options = []
     ) {
-        parent::copy(
+        return parent::copy(
             $originUrl,
             $this->acfFileUrl,
             $fileName,
