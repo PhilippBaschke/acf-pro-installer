@@ -1,25 +1,31 @@
 <?php namespace PhilippBaschke\ACFProInstaller;
 
 use Composer\Composer;
+use Composer\DependencyResolver\Operation\OperationInterface;
+use Composer\EventDispatcher\EventSubscriberInterface;
+use Composer\Installer\PackageEvent;
+use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
+use Composer\Plugin\PluginEvents;
 use Composer\Plugin\PluginInterface;
+use Composer\Plugin\PreFileDownloadEvent;
 use Dotenv\Dotenv;
 use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException;
 
 /**
- * A composer plugin that adds a repository for ACF PRO
+ * A composer plugin that makes installing ACF PRO possible
  *
  * The WordPress plugin Advanced Custom Fields PRO (ACF PRO) does not
  * offer a way to install it via composer natively.
  *
- * This plugin adds a 'package' repository to composer that downloads the
+ * This plugin uses a 'package' repository (user supplied) that downloads the
  * correct version from the ACF site using the version number from
- * composer.json and a license key from the ENVIRONMENT or an .env file.
+ * that repository and a license key from the ENVIRONMENT or an .env file.
  *
- * With this plugin user no longer need to supply the repository and expose
- * their license key in composer.json.
+ * With this plugin user no longer need to expose their license key in
+ * composer.json.
  */
-class Plugin implements PluginInterface
+class Plugin implements PluginInterface, EventSubscriberInterface
 {
     /**
      * The name of the environment variable
@@ -28,98 +34,139 @@ class Plugin implements PluginInterface
     const KEY_ENV_VARIABLE = 'ACF_PRO_KEY';
 
     /**
-     * The repository definition for ACF PRO
-     *
-     * The definition is loaded from repository.json.
-     * This file contains a repository definition that would normally be used
-     * in the repositories attribute in composer.json.
-     * @link https://getcomposer.org/doc/04-schema.md#repositories
-     *
-     * It is based on the recommended approach from the ACF support forum.
-     * @link https://gist.github.com/dmalatesta/4fae4490caef712a51bf
-     *
-     * @access protected
-     * @var array
+     * The name of the ACF PRO package
      */
-    protected $config;
+    const ACF_PRO_PACKAGE_NAME =
+    'advanced-custom-fields/advanced-custom-fields-pro';
 
     /**
-     * Constructor
-     *
-     * Load the repository file when the Plugin is created.
-     *
-     * @access public
+     * The url where ACF PRO can be downloaded (without version and key)
      */
-    public function __construct()
-    {
-        $repositoryFile = __DIR__.DIRECTORY_SEPARATOR.'repository.json';
-        $this->config = json_decode(file_get_contents($repositoryFile), true);
-    }
+    const ACF_PRO_PACKAGE_URL =
+    'https://connect.advancedcustomfields.com/index.php?p=pro&a=download';
+
+    /**
+     * @access protected
+     * @var Composer
+     */
+    protected $composer;
+
+    /**
+     * @access protected
+     * @var IOInterface
+     */
+    protected $io;
 
     /**
      * The function that is called when the plugin is activated
      *
-     * This function provides the main functionality of this plugin. It gets
-     * the version from composer.json, the key from the environment and adds
-     * the repository to composer (if all prerequisites are fulfilled).
+     * Makes composer and io available because they are needed
+     * in the addKey method.
      *
      * @access public
-     * @param Composer\Composer $composer The composer object
-     * @param Composer\IOInterface $io Not used
-     * @throws UnexpectedValueException
-     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException
+     * @param Composer $composer The composer object
+     * @param IOInterface $io Not used
      */
     public function activate(Composer $composer, IOInterface $io)
     {
-        $requiredVersion = $this->getVersion($composer->getPackage());
-        if (!$requiredVersion) {
-            return;
-        }
-        $key = $this->getKeyFromEnv();
-
-        $this->updateConfig($requiredVersion, $key);
-
-        $repository = $composer->getRepositoryManager()
-                    ->createRepository($this->config['type'], $this->config);
-        $composer->getRepositoryManager()->prependRepository($repository);
+        $this->composer = $composer;
+        $this->io = $io;
     }
 
     /**
-     * Get the required version of a package from the root package
+     * Subscribe this Plugin to relevant Events
      *
-     * This function will extract the required version from a package
-     * definition in composer.json.
+     * Pre Install/Update: The version needs to be added to the url
+     *                     (will show up in composer.lock)
+     * Pre Download: The key needs to be added to the url
+     *               (will not show up in composer.lock)
      *
-     * E.g: "test/test": "1.2.3" in composer.json => 1.2.3
+     * @access public
+     * @return array An array of events that the plugin subscribes to
+     * @static
+     */
+    public static function getSubscribedEvents()
+    {
+        return [
+            PackageEvents::PRE_PACKAGE_INSTALL => 'addVersion',
+            PackageEvents::PRE_PACKAGE_UPDATE => 'addVersion',
+            PluginEvents::PRE_FILE_DOWNLOAD => 'addKey'
+        ];
+    }
+
+    /**
+     * Add the version to the package url
+     *
+     * The version needs to be added in the PRE_PACKAGE_INSTALL/UPDATE
+     * event to make sure that different version save different urls
+     * in composer.lock. Composer would load any available version from cache
+     * although the version numbers might differ (because they have the same
+     * url).
+     *
+     * @access public
+     * @param PackageEvent $event The event that called the method
+     * @throws UnexpectedValueException
+     */
+    public function addVersion(PackageEvent $event)
+    {
+        $package = $this->getPackageFromOperation($event->getOperation());
+
+        if ($package->getName() === self::ACF_PRO_PACKAGE_NAME) {
+            $version = $this->validateVersion($package->getPrettyVersion());
+            $package->setDistUrl(
+                $this->addParameterToUrl($package->getDistUrl(), 't', $version)
+            );
+        }
+    }
+
+
+    /**
+     * Add the key from the environment to the event url
+     *
+     * The key is not added to the package because it would show up in the
+     * composer.lock file in this case. A custom file system is used to
+     * swap out the ACF PRO url with a url that contains the key.
+     *
+     * @access public
+     * @param PreFileDownloadEvent $event The event that called this method
+     * @throws MissingKeyException
+     */
+    public function addKey(PreFileDownloadEvent $event)
+    {
+        $processedUrl = $event->getProcessedUrl();
+
+        if ($this->isAcfProPackageUrl($processedUrl)) {
+            $rfs = $event->getRemoteFilesystem();
+            $acfRfs = new RemoteFilesystem(
+                $this->addParameterToUrl(
+                    $processedUrl,
+                    'k',
+                    $this->getKeyFromEnv()
+                ),
+                $this->io,
+                $this->composer->getConfig(),
+                $rfs->getOptions(),
+                $rfs->isTlsDisabled()
+            );
+            $event->setRemoteFilesystem($acfRfs);
+        }
+    }
+
+    /**
+     * Get the package from a given operation
+     *
+     * Is needed because update operations don't have a getPackage method
      *
      * @access protected
-     * @param Composer\Package\RootPackageInterface
-     *   $rootPackage A composer root package
-     * @return mixed
-     *   The version of the package from the required packages (if defined) or
-     *   the version of the package from the require-dev packages (if defined).
-     *   false otherwise
-     * @throws UnexpectedValueException
-     * @todo
-     *   Consider adding a case when the package is defined in require and
-     *   require-dev (currently returns version from require).
+     * @param OperationInterface $operation The operation
+     * @return PackageInterface The package of the operation
      */
-    protected function getVersion($rootPackage)
+    protected function getPackageFromOperation(OperationInterface $operation)
     {
-        $package = $this->config['package']['name'];
-        $requires = [
-            $rootPackage->getRequires(),
-            $rootPackage->getDevRequires()
-        ];
-
-        foreach ($requires as $require) {
-            if (isset($require[$package])) {
-                $version = $require[$package]->getPrettyConstraint();
-                return $this->validateVersion($version);
-            }
+        if ($operation->getJobType() === 'update') {
+            return $operation->getTargetPackage();
         }
-
-        return false;
+        return $operation->getPackage();
     }
 
     /**
@@ -141,14 +188,25 @@ class Plugin implements PluginInterface
 
         if (!preg_match($major_minor_patch, $version)) {
             throw new \UnexpectedValueException(
-                'The version constraint of advanced-custom-fields/' .
-                'advanced-custom-fields-pro' .
+                'The version constraint of ' . self::ACF_PRO_PACKAGE_NAME .
                 ' should be exact (with 3 digits). ' .
                 'Invalid version string "' . $version . '"'
             );
         }
 
         return $version;
+    }
+
+    /**
+     * Test if the given url is the ACF PRO download url
+     *
+     * @access protected
+     * @param string The url that should be checked
+     * @return bool
+     */
+    protected function isAcfProPackageUrl($url)
+    {
+        return strpos($url, self::ACF_PRO_PACKAGE_URL) !== false;
     }
 
     /**
@@ -191,36 +249,42 @@ class Plugin implements PluginInterface
     }
 
     /**
-     * Update the version and the key of the config
+     * Add a parameter to the given url
      *
-     * The package version needs to match the required version and the dist url
-     * needs to include the version and key as a parameter.
-     *
-     * @access protected
-     * @param string The required version
-     * @param string The ACF PRO license key
-     */
-    protected function updateConfig($version, $key)
-    {
-        $this->config['package']['version'] = $version;
-        $this->addParameterToUrl('t', $version);
-        $this->addParameterToUrl('k', $key);
-    }
-
-    /**
-     * Add a parameter to the dist url
-     *
-     * Adds the given parameter at the end of the dist url. It only works with
+     * Adds the given parameter at the end of the given url. It only works with
      * urls that already have parameters (e.g. test.com?p=true) because it
      * uses & as a separation character.
      *
      * @access protected
+     * @param string $url The url that should be appended
      * @param string $parameter The name of the parameter
      * @param string $value The value of the parameter
+     * @return string The url appended with &parameter=value
      */
-    protected function addParameterToUrl($parameter, $value)
+    protected function addParameterToUrl($url, $parameter, $value)
     {
+        $cleanUrl = $this->removeParameterFromUrl($url, $parameter);
         $urlParameter = '&' . $parameter . '=' . urlencode($value);
-        $this->config['package']['dist']['url'] .= $urlParameter;
+
+        return $cleanUrl .= $urlParameter;
+    }
+
+    /**
+     * Remove a given parameter from the given url
+     *
+     * Removes &parameter=value from the given url. Only works with urls that
+     * have multiple parameters and the parameter that should be removed is
+     * not the first (because of the & character).
+     *
+     * @access protected
+     * @param string $url The url where the parameter should be removed
+     * @param string $parameter The name of the parameter
+     * @return string The url with the &parameter=value removed
+     */
+    protected function removeParameterFromUrl($url, $parameter)
+    {
+        // e.g. &t=1.2.3 in example.com?p=index.php&t=1.2.3&k=key
+        $pattern = "/(&$parameter=[^&]*)/";
+        return preg_replace($pattern, '', $url);
     }
 }

@@ -1,5 +1,7 @@
 <?php namespace PhilippBaschke\ACFProInstaller\Test;
 
+use Composer\Installer\PackageEvents;
+use Composer\Plugin\PluginEvents;
 use PhilippBaschke\ACFProInstaller\Plugin;
 
 class PluginTest extends \PHPUnit_Framework_TestCase
@@ -31,443 +33,340 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testCreatePackageRepository()
+    public function testImplementsEventSubscriberInterface()
+    {
+        $this->assertInstanceOf(
+            'Composer\EventDispatcher\EventSubscriberInterface',
+            new Plugin()
+        );
+    }
+
+    public function testActivateMakesComposerAndIOAvailable()
+    {
+        $composer = $this->getMockBuilder('Composer\Composer')->getMock();
+        $io = $this->getMockBuilder('Composer\IO\IOInterface')->getMock();
+        $plugin = new Plugin;
+        $plugin->activate($composer, $io);
+
+        $this->assertAttributeEquals($composer, 'composer', $plugin);
+        $this->assertAttributeEquals($io, 'io', $plugin);
+    }
+
+    public function testSubscribesToPrePackageInstallEvent()
+    {
+        $subscribedEvents = Plugin::getSubscribedEvents();
+        $this->assertEquals(
+            $subscribedEvents[PackageEvents::PRE_PACKAGE_INSTALL],
+            'addVersion'
+        );
+    }
+
+    public function testSubscribesToPreUpdateInstallEvent()
+    {
+        $subscribedEvents = Plugin::getSubscribedEvents();
+        $this->assertEquals(
+            $subscribedEvents[PackageEvents::PRE_PACKAGE_UPDATE],
+            'addVersion'
+        );
+    }
+
+    public function testSubscribesToPreFileDownloadEvent()
+    {
+        $subscribedEvents = Plugin::getSubscribedEvents();
+        $this->assertEquals(
+            $subscribedEvents[PluginEvents::PRE_FILE_DOWNLOAD],
+            'addKey'
+        );
+    }
+
+    public function testAddVersionOnInstall()
+    {
+        // The version that should be required
+        $version = '1.2.3';
+
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
+        // Mock a Package
+        $package = $this
+                 ->getMockBuilder('Composer\Package\PackageInterface')
+                 ->setMethods([
+                     'getName',
+                     'getPrettyVersion',
+                     'getDistUrl',
+                     'setDistUrl'
+                 ])
+                 ->getMockForAbstractClass();
+
+        $package
+            ->expects($this->once())
+            ->method('getName')
+            ->willReturn(self::REPO_NAME);
+
+        $package
+            ->expects($this->once())
+            ->method('getPrettyVersion')
+            ->willReturn($version);
+
+        $package
+            ->expects($this->once())
+            ->method('getDistUrl')
+            ->willReturn(self::REPO_URL);
+
+        $package
+            ->expects($this->once())
+            ->method('setDistUrl')
+            ->with(self::REPO_URL . "&t=$version");
+
+        // Mock an Operation
+        $operationClass =
+        'Composer\DependencyResolver\Operation\InstallOperation';
+        $operation = $this
+                          ->getMockBuilder($operationClass)
+                          ->disableOriginalConstructor()
+                          ->setMethods(['getJobType', 'getPackage'])
+                          ->getMock();
+
+        $operation
+            ->expects($this->once())
+            ->method('getJobType')
+            ->willReturn('install');
+
+        $operation
+            ->expects($this->once())
+            ->method('getPackage')
+            ->willReturn($package);
+
+        // Mock a PackageEvent
+        $packageEvent = $this
+                      ->getMockBuilder('Composer\Installer\PackageEvent')
+                      ->disableOriginalConstructor()
+                      ->setMethods(['getOperation'])
+                      ->getMock();
+
+        $packageEvent
+            ->expects($this->once())
+            ->method('getOperation')
+            ->willReturn($operation);
+
+        // Call addVersion
+        $plugin = new Plugin();
+        $plugin->addVersion($packageEvent);
+    }
+
+    public function testAddVersionOnUpdate()
+    {
+        // The version that should be required
+        $version = '1.2.3';
+
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
+        // Mock a Package
+        $package = $this
+                 ->getMockBuilder('Composer\Package\PackageInterface')
+                 ->setMethods([
+                     'getName',
+                     'getPrettyVersion',
+                     'getDistUrl',
+                     'setDistUrl'
+                 ])
+                 ->getMockForAbstractClass();
+
+        $package
+            ->expects($this->once())
+            ->method('getName')
+            ->willReturn(self::REPO_NAME);
+
+        $package
+            ->expects($this->once())
+            ->method('getPrettyVersion')
+            ->willReturn($version);
+
+        $package
+            ->expects($this->once())
+            ->method('getDistUrl')
+            ->willReturn(self::REPO_URL);
+
+        $package
+            ->expects($this->once())
+            ->method('setDistUrl')
+            ->with(self::REPO_URL . "&t=$version");
+
+        // Mock an Operation
+        $operationClass =
+        'Composer\DependencyResolver\Operation\UpdateOperation';
+        $operation = $this
+                          ->getMockBuilder($operationClass)
+                          ->disableOriginalConstructor()
+                          ->setMethods(['getJobType', 'getTargetPackage'])
+                          ->getMock();
+
+        $operation
+            ->expects($this->once())
+            ->method('getJobType')
+            ->willReturn('update');
+
+        $operation
+            ->expects($this->once())
+            ->method('getTargetPackage')
+            ->willReturn($package);
+
+        // Mock a PackageEvent
+        $packageEvent = $this
+                      ->getMockBuilder('Composer\Installer\PackageEvent')
+                      ->disableOriginalConstructor()
+                      ->setMethods(['getOperation'])
+                      ->getMock();
+
+        $packageEvent
+            ->expects($this->once())
+            ->method('getOperation')
+            ->willReturn($operation);
+
+        // Call addVersion
+        $plugin = new Plugin();
+        $plugin->addVersion($packageEvent);
+    }
+
+    public function testDontAddVersionOnOtherPackages()
     {
         // Make key available in the ENVIRONMENT
         putenv(self::KEY_ENV_VARIABLE . '=KEY');
 
-        // Mock a Link (return by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->getMock();
+        // Mock a Package
+        $package = $this
+                 ->getMockBuilder('Composer\Package\PackageInterface')
+                 ->setMethods([
+                     'getName',
+                     'getPrettyVersion',
+                     'getDistUrl',
+                     'setDistUrl'
+                 ])
+                 ->getMockForAbstractClass();
 
-        $link->method('getPrettyConstraint')->willReturn('1.2.3');
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
+        $package
             ->expects($this->once())
-            ->method('createRepository')
-            ->with(
-                $this->equalTo('package'),
-                $this->callback(function ($config) {
-                    if (!isset($config['package'])) {
-                        return false;
-                    }
+            ->method('getName')
+            ->willReturn('another-package');
 
-                    $package = $config['package'];
-                    return
-                    $package['name'] === self::REPO_NAME &&
-                        array_key_exists('version', $package) &&
-                    $package['type'] === self::REPO_TYPE &&
-                    $package['dist']['type'] === 'zip' &&
-                    strpos($package['dist']['url'], self::REPO_URL) !== false;
-                })
-            )
-            ->willReturn($repositoryInterface);
-
-        // Mock Composer (returns the mocked RepositoryManager)
-        $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
-                  ->getMock();
-
-        $composer
-            ->expects($this->atLeast(1))
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
-
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
-
-        // Mock IOInterface
-        $io = $this
-            ->getMockBuilder('Composer\IO\IOInterface')
-            ->getMock();
-
-        // Activate Plugin
-        $plugin = new Plugin();
-        $plugin->activate($composer, $io);
-    }
-
-    public function testPrependRepository()
-    {
-        // Make key available in the ENVIRONMENT
-        putenv(self::KEY_ENV_VARIABLE . '=KEY');
-
-        // Mock a Link (return by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->getMock();
-
-        $link->method('getPrettyConstraint')->willReturn('1.2.3');
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods([
-                               'createRepository',
-                               'prependRepository'
-                           ])
-                           ->getMock();
-
-        $repositoryManager
-            ->expects($this->any())
-            ->method('createRepository')
-            ->willReturn($repositoryInterface);
-
-        $repositoryManager
-            ->expects($this->once())
-            ->method('prependRepository')
-            ->with($this->identicalTo($repositoryInterface));
-
-        // Mock Composer (returns the mocked RepositoryManager)
-        $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
-                  ->getMock();
-
-        $composer
-            ->expects($this->any())
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
-
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
-
-        // Mock IOInterface
-        $io = $this
-            ->getMockBuilder('Composer\IO\IOInterface')
-            ->getMock();
-
-        // Activate Plugin
-        $plugin = new Plugin();
-        $plugin->activate($composer, $io);
-    }
-
-    public function testDontCreateRepositoryWhenNotRequired()
-    {
-        // Mock a RootPackageInterface (returned by getPackage)
-        // Not mocking getRequires/getDevRequires is like the package
-        // is not required (because the methods return null)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->getMockForAbstractClass();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
+        $package
             ->expects($this->never())
-            ->method('createRepository');
+            ->method('getPrettyVersion');
 
-        // Mock Composer
-        $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
-                  ->getMock();
+        $package
+            ->expects($this->never())
+            ->method('getDistUrl');
 
-        $composer
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
+        $package
+            ->expects($this->never())
+            ->method('setDistUrl');
 
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
+        // Mock an Operation
+        $operationClass =
+        'Composer\DependencyResolver\Operation\InstallOperation';
+        $operation = $this
+                          ->getMockBuilder($operationClass)
+                          ->disableOriginalConstructor()
+                          ->setMethods(['getJobType', 'getPackage'])
+                          ->getMock();
 
-        // Mock IOInterface
-        $io = $this
-            ->getMockBuilder('Composer\IO\IOInterface')
-            ->getMock();
+        $operation
+            ->expects($this->once())
+            ->method('getJobType')
+            ->willReturn('install');
 
-        // Activate Plugin
+        $operation
+            ->expects($this->once())
+            ->method('getPackage')
+            ->willReturn($package);
+
+        // Mock a PackageEvent
+        $packageEvent = $this
+                      ->getMockBuilder('Composer\Installer\PackageEvent')
+                      ->disableOriginalConstructor()
+                      ->setMethods(['getOperation'])
+                      ->getMock();
+
+        $packageEvent
+            ->expects($this->once())
+            ->method('getOperation')
+            ->willReturn($operation);
+
+        // Call addVersion
         $plugin = new Plugin();
-        $plugin->activate($composer, $io);
-    }
-
-    public function testGetVersionFromRequires()
-    {
-        // The version that should be required
-        $version = '1.2.3';
-
-        // Make key available in the ENVIRONMENT
-        putenv(self::KEY_ENV_VARIABLE . '=KEY');
-
-        // Mock a Link (returned by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->setMethods(['getPrettyConstraint'])
-              ->getMock();
-
-        $link
-            ->expects($this->once())
-            ->method('getPrettyConstraint')
-            ->willReturn($version);
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
-            ->expects($this->once())
-            ->method('createRepository')
-            ->with(
-                $this->anything(),
-                $this->callback(function ($config) use ($version) {
-                    return $config['package']['version'] === $version;
-                })
-            )
-            ->willReturn($repositoryInterface);
-
-        // Mock Composer
-        $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
-                  ->getMock();
-
-        $composer
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
-
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
-
-        // Mock IOInterface
-        $io = $this
-            ->getMockBuilder('Composer\IO\IOInterface')
-            ->getMock();
-
-        // Activate Plugin
-        $plugin = new Plugin();
-        $plugin->activate($composer, $io);
-    }
-
-    public function testGetVersionFromDevRequires()
-    {
-        // The version that should be required
-        $version = '1.2.3';
-
-        // Make key available in the ENVIRONMENT
-        putenv(self::KEY_ENV_VARIABLE . '=KEY');
-
-        // Mock a Link (returned by getDevRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->setMethods(['getPrettyConstraint'])
-              ->getMock();
-
-        $link
-            ->expects($this->once())
-            ->method('getPrettyConstraint')
-            ->willReturn($version);
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getDevRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getDevRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
-            ->expects($this->once())
-            ->method('createRepository')
-            ->with(
-                $this->anything(),
-                $this->callback(function ($config) use ($version) {
-                    return $config['package']['version'] === $version;
-                })
-            )
-            ->willReturn($repositoryInterface);
-
-        // Mock Composer
-        $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
-                  ->getMock();
-
-        $composer
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
-
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
-
-        // Mock IOInterface
-        $io = $this
-            ->getMockBuilder('Composer\IO\IOInterface')
-            ->getMock();
-
-        // Activate Plugin
-        $plugin = new Plugin();
-        $plugin->activate($composer, $io);
+        $plugin->addVersion($packageEvent);
     }
 
     public function testExactVersionPassesValidation()
     {
-        // The version that should be required
-        $version = '1.2.3';
-
         // Make key available in the ENVIRONMENT
         putenv(self::KEY_ENV_VARIABLE . '=KEY');
 
-        // Mock a Link (returned by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->setMethods(['getPrettyConstraint'])
-              ->getMock();
+        // Mock a Package
+        $package = $this
+                 ->getMockBuilder('Composer\Package\PackageInterface')
+                 ->setMethods([
+                     'getName',
+                     'getPrettyVersion',
+                     'getDistUrl',
+                     'setDistUrl'
+                 ])
+                 ->getMockForAbstractClass();
 
-        $link
-            ->method('getPrettyConstraint')
-            ->willReturn($version);
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
+        $package
             ->expects($this->once())
-            ->method('createRepository')
-            ->willReturn($repositoryInterface);
+            ->method('getName')
+            ->willReturn(self::REPO_NAME);
 
-        // Mock Composer
-        $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
-                  ->getMock();
+        $package
+            ->expects($this->once())
+            ->method('getPrettyVersion')
+            ->willReturn('1.2.3');
 
-        $composer
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
+        $package
+            ->expects($this->once())
+            ->method('getDistUrl')
+            ->willReturn(self::REPO_URL);
 
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
+        $package
+            ->expects($this->once())
+            ->method('setDistUrl');
 
-        // Mock IOInterface
-        $io = $this
-            ->getMockBuilder('Composer\IO\IOInterface')
-            ->getMock();
+        // Mock an Operation
+        $operationClass =
+        'Composer\DependencyResolver\Operation\InstallOperation';
+        $operation = $this
+                          ->getMockBuilder($operationClass)
+                          ->disableOriginalConstructor()
+                          ->setMethods(['getJobType', 'getPackage'])
+                          ->getMock();
 
-        // Activate Plugin
+        $operation
+            ->expects($this->once())
+            ->method('getJobType')
+            ->willReturn('install');
+
+        $operation
+            ->expects($this->once())
+            ->method('getPackage')
+            ->willReturn($package);
+
+        // Mock a PackageEvent
+        $packageEvent = $this
+                      ->getMockBuilder('Composer\Installer\PackageEvent')
+                      ->disableOriginalConstructor()
+                      ->setMethods(['getOperation'])
+                      ->getMock();
+
+        $packageEvent
+            ->expects($this->once())
+            ->method('getOperation')
+            ->willReturn($operation);
+
+        // Call addVersion
         $plugin = new Plugin();
-        $plugin->activate($composer, $io);
+        $plugin->addVersion($packageEvent);
     }
 
     protected function versionFailsValidationHelper($version)
@@ -480,158 +379,313 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             'Invalid version string "' . $version . '"'
         );
 
-        // Mock a Link (returned by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->setMethods(['getPrettyConstraint'])
-              ->getMock();
+        // Mock a Package
+        $package = $this
+                 ->getMockBuilder('Composer\Package\PackageInterface')
+                 ->setMethods([
+                     'getName',
+                     'getPrettyVersion'
+                 ])
+                 ->getMockForAbstractClass();
 
-        $link
-            ->method('getPrettyConstraint')
+        $package
+            ->expects($this->once())
+            ->method('getName')
+            ->willReturn(self::REPO_NAME);
+
+        $package
+            ->expects($this->once())
+            ->method('getPrettyVersion')
             ->willReturn($version);
 
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
+        // Mock an Operation
+        $operationClass =
+        'Composer\DependencyResolver\Operation\InstallOperation';
+        $operation = $this
+                          ->getMockBuilder($operationClass)
+                          ->disableOriginalConstructor()
+                          ->setMethods(['getJobType', 'getPackage'])
+                          ->getMock();
 
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
+        $operation
+            ->expects($this->once())
+            ->method('getJobType')
+            ->willReturn('install');
 
-        // Mock Composer
-        $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
-                  ->getMock();
+        $operation
+            ->expects($this->once())
+            ->method('getPackage')
+            ->willReturn($package);
 
-        $composer->expects($this->never())->method('getRepositoryManager');
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
+        // Mock a PackageEvent
+        $packageEvent = $this
+                      ->getMockBuilder('Composer\Installer\PackageEvent')
+                      ->disableOriginalConstructor()
+                      ->setMethods(['getOperation'])
+                      ->getMock();
 
-        // Mock IOInterface
-        $io = $this
-            ->getMockBuilder('Composer\IO\IOInterface')
-            ->getMock();
+        $packageEvent
+            ->expects($this->once())
+            ->method('getOperation')
+            ->willReturn($operation);
 
-        // Activate Plugin
+        // Call addVersion
         $plugin = new Plugin();
-        $plugin->activate($composer, $io);
+        $plugin->addVersion($packageEvent);
     }
 
-    public function testRangeVersionFailsValidation()
-    {
-        $this->versionFailsValidationHelper('>=1.0');
-    }
-
-    public function testRangeHyphenVersionFailsValidation()
-    {
-        $this->versionFailsValidationHelper('1.0 - 2.0');
-    }
-
-    public function testWildcardVersionFailsValidation()
-    {
-        $this->versionFailsValidationHelper('1.0.*');
-    }
-
-    public function testTildeVersionFailsValidation()
-    {
-        $this->versionFailsValidationHelper('~1.2.3');
-    }
-
-    public function testCaretVersionFailsValidation()
-    {
-        $this->versionFailsValidationHelper('^1.2.3');
-    }
-
-    public function testExactVersionWithout3DigitsFailsValidation()
+    public function testExactVersionWith2DigitsFailsValidation()
     {
         $this->versionFailsValidationHelper('1.2');
     }
 
-    public function testAddVersionToDistUrl()
+    public function testExactVersionWith1DigitsFailsValidation()
     {
-        // The version that should be added to the url
+        $this->versionFailsValidationHelper('1');
+    }
+
+    public function testExactVersionWith4DigitsFailsValidation()
+    {
+        $this->versionFailsValidationHelper('1.2.3.4');
+    }
+
+    public function testDontAddVersionTwice()
+    {
+        // The version that should be required
         $version = '1.2.3';
 
         // Make key available in the ENVIRONMENT
         putenv(self::KEY_ENV_VARIABLE . '=KEY');
 
-        // Mock a Link (return by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->getMock();
+        // Mock a Package
+        $package = $this
+                 ->getMockBuilder('Composer\Package\PackageInterface')
+                 ->setMethods([
+                     'getName',
+                     'getPrettyVersion',
+                     'getDistUrl',
+                     'setDistUrl'
+                 ])
+                 ->getMockForAbstractClass();
 
-        $link->method('getPrettyConstraint')->willReturn($version);
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
+        $package
             ->expects($this->once())
-            ->method('createRepository')
-            ->with(
-                $this->anything(),
-                $this->callback(function ($config) use ($version) {
-                    return strpos(
-                        $config['package']['dist']['url'],
-                        '&t='.$version
-                    ) !== false;
-                })
-            )
-            ->willReturn($repositoryInterface);
+            ->method('getName')
+            ->willReturn(self::REPO_NAME);
 
-        // Mock Composer (returns the mocked RepositoryManager)
+        $package
+            ->expects($this->once())
+            ->method('getPrettyVersion')
+            ->willReturn($version);
+
+        $package
+            ->expects($this->once())
+            ->method('getDistUrl')
+            ->willReturn(self::REPO_URL . '&t=' . $version);
+
+        $package
+            ->expects($this->once())
+            ->method('setDistUrl')
+            ->with(self::REPO_URL . "&t=$version");
+
+        // Mock an Operation
+        $operationClass =
+        'Composer\DependencyResolver\Operation\InstallOperation';
+        $operation = $this
+                          ->getMockBuilder($operationClass)
+                          ->disableOriginalConstructor()
+                          ->setMethods(['getJobType', 'getPackage'])
+                          ->getMock();
+
+        $operation
+            ->expects($this->once())
+            ->method('getJobType')
+            ->willReturn('install');
+
+        $operation
+            ->expects($this->once())
+            ->method('getPackage')
+            ->willReturn($package);
+
+        // Mock a PackageEvent
+        $packageEvent = $this
+                      ->getMockBuilder('Composer\Installer\PackageEvent')
+                      ->disableOriginalConstructor()
+                      ->setMethods(['getOperation'])
+                      ->getMock();
+
+        $packageEvent
+            ->expects($this->once())
+            ->method('getOperation')
+            ->willReturn($operation);
+
+        // Call addVersion
+        $plugin = new Plugin();
+        $plugin->addVersion($packageEvent);
+    }
+
+    public function testReplaceVersionInUrl()
+    {
+        // The version that should be required
+        $version = '1.2.3';
+
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
+        // Mock a Package
+        $package = $this
+                 ->getMockBuilder('Composer\Package\PackageInterface')
+                 ->setMethods([
+                     'getName',
+                     'getPrettyVersion',
+                     'getDistUrl',
+                     'setDistUrl'
+                 ])
+                 ->getMockForAbstractClass();
+
+        $package
+            ->expects($this->once())
+            ->method('getName')
+            ->willReturn(self::REPO_NAME);
+
+        $package
+            ->expects($this->once())
+            ->method('getPrettyVersion')
+            ->willReturn($version);
+
+        $package
+            ->expects($this->once())
+            ->method('getDistUrl')
+            ->willReturn(self::REPO_URL . '&t=' . $version . '.4');
+
+        $package
+            ->expects($this->once())
+            ->method('setDistUrl')
+            ->with(self::REPO_URL . "&t=$version");
+
+        // Mock an Operation
+        $operationClass =
+        'Composer\DependencyResolver\Operation\InstallOperation';
+        $operation = $this
+                          ->getMockBuilder($operationClass)
+                          ->disableOriginalConstructor()
+                          ->setMethods(['getJobType', 'getPackage'])
+                          ->getMock();
+
+        $operation
+            ->expects($this->once())
+            ->method('getJobType')
+            ->willReturn('install');
+
+        $operation
+            ->expects($this->once())
+            ->method('getPackage')
+            ->willReturn($package);
+
+        // Mock a PackageEvent
+        $packageEvent = $this
+                      ->getMockBuilder('Composer\Installer\PackageEvent')
+                      ->disableOriginalConstructor()
+                      ->setMethods(['getOperation'])
+                      ->getMock();
+
+        $packageEvent
+            ->expects($this->once())
+            ->method('getOperation')
+            ->willReturn($operation);
+
+        // Call addVersion
+        $plugin = new Plugin();
+        $plugin->addVersion($packageEvent);
+    }
+
+    public function testAddKeyCreatesCustomFilesystemWithOldValues()
+    {
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
+        // Mock a RemoteFilesystem
+        $options = ['options' => 'array'];
+        $tlsDisabled = true;
+
+        $rfs = $this
+             ->getMockBuilder('Composer\Util\RemoteFilesystem')
+             ->disableOriginalConstructor()
+             ->setMethods(['getOptions', 'isTlsDisabled'])
+             ->getMock();
+
+        $rfs
+            ->expects($this->once())
+            ->method('getOptions')
+            ->willReturn($options);
+
+        $rfs
+            ->expects($this->once())
+            ->method('isTlsDisabled')
+            ->willReturn($tlsDisabled);
+
+        // Mock Config
+        $config = $this
+                ->getMockBuilder('Composer\Config')
+                ->getMock();
+
+        // Mock Composer
         $composer = $this
                   ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->setMethods(['getConfig'])
                   ->getMock();
 
         $composer
-            ->expects($this->atLeast(1))
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
-
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
+            ->expects($this->once())
+            ->method('getConfig')
+            ->willReturn($config);
 
         // Mock IOInterface
         $io = $this
             ->getMockBuilder('Composer\IO\IOInterface')
             ->getMock();
 
-        // Activate Plugin
+        // Mock an Event
+        $event = $this
+               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+               ->disableOriginalConstructor()
+               ->setMethods([
+                   'getProcessedUrl',
+                   'getRemoteFilesystem',
+                   'setRemoteFilesystem'
+               ])
+               ->getMock();
+
+        $event
+            ->expects($this->once())
+            ->method('getProcessedUrl')
+            ->willReturn(self::REPO_URL);
+
+        $event
+            ->expects($this->once())
+            ->method('getRemoteFilesystem')
+            ->willReturn($rfs);
+
+        $event
+            ->expects($this->once())
+            ->method('setRemoteFilesystem')
+            ->with($this->callback(
+                function ($rfs) use ($config, $io, $options, $tlsDisabled) {
+                    $this->assertAttributeEquals($config, 'config', $rfs);
+                    $this->assertAttributeEquals($io, 'io', $rfs);
+                    $this->assertEquals($options, $rfs->getOptions());
+                    $this->assertEquals($tlsDisabled, $rfs->isTlsDisabled());
+                    return true;
+                }
+            ));
+
+        // Call addKey
         $plugin = new Plugin();
         $plugin->activate($composer, $io);
+        $plugin->addKey($event);
     }
 
-    public function testAddKeyFromENVToDistUrl()
+    public function testAddKeyFromENV()
     {
         // The key that should be available in the ENVIRONMENT
         $key = 'ENV_KEY';
@@ -639,79 +693,86 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         // Make key available in the ENVIRONMENT
         putenv(self::KEY_ENV_VARIABLE . '=' . $key);
 
-        // Mock a Link (return by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->getMock();
+        // Mock a RemoteFilesystem
+        $rfs = $this
+             ->getMockBuilder('Composer\Util\RemoteFilesystem')
+             ->disableOriginalConstructor()
+             ->setMethods(['getOptions', 'isTlsDisabled'])
+             ->getMock();
 
-        $link->method('getPrettyConstraint')->willReturn('1.2.3');
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
+        $rfs
             ->expects($this->once())
-            ->method('createRepository')
-            ->with(
-                $this->anything(),
-                $this->callback(function ($config) use ($key) {
-                    return strpos(
-                        $config['package']['dist']['url'],
-                        '&k='.$key
-                    ) !== false;
-                })
-            )
-            ->willReturn($repositoryInterface);
+            ->method('getOptions')
+            ->willReturn([]);
 
-        // Mock Composer (returns the mocked RepositoryManager)
+        $rfs
+            ->expects($this->once())
+            ->method('isTlsDisabled')
+            ->willReturn(true);
+
+        // Mock Config
+        $config = $this
+                ->getMockBuilder('Composer\Config')
+                ->getMock();
+
+        // Mock Composer
         $composer = $this
                   ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->setMethods(['getConfig'])
                   ->getMock();
 
         $composer
-            ->expects($this->atLeast(1))
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
-
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
+            ->expects($this->once())
+            ->method('getConfig')
+            ->willReturn($config);
 
         // Mock IOInterface
         $io = $this
             ->getMockBuilder('Composer\IO\IOInterface')
             ->getMock();
 
-        // Activate Plugin
+        // Mock an Event
+        $event = $this
+               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+               ->disableOriginalConstructor()
+               ->setMethods([
+                   'getProcessedUrl',
+                   'getRemoteFilesystem',
+                   'setRemoteFilesystem'
+               ])
+               ->getMock();
+
+        $event
+            ->expects($this->once())
+            ->method('getProcessedUrl')
+            ->willReturn(self::REPO_URL);
+
+        $event
+            ->expects($this->once())
+            ->method('getRemoteFilesystem')
+            ->willReturn($rfs);
+
+        $event
+            ->expects($this->once())
+            ->method('setRemoteFilesystem')
+            ->with($this->callback(
+                function ($rfs) use ($key) {
+                    $this->assertAttributeContains(
+                        "&k=$key",
+                        'acfFileUrl',
+                        $rfs
+                    );
+                    return true;
+                }
+            ));
+
+        // Call addKey
         $plugin = new Plugin();
         $plugin->activate($composer, $io);
+        $plugin->addKey($event);
     }
 
-    public function testAddKeyFromDotEnvToDistUrl()
+    public function testAddKeyFromDotEnv()
     {
         // The key that should be available in the .env file
         $key = 'DOT_ENV_KEY';
@@ -722,76 +783,83 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             self::KEY_ENV_VARIABLE . '=' . $key
         );
 
-        // Mock a Link (return by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->getMock();
+        // Mock a RemoteFilesystem
+        $rfs = $this
+             ->getMockBuilder('Composer\Util\RemoteFilesystem')
+             ->disableOriginalConstructor()
+             ->setMethods(['getOptions', 'isTlsDisabled'])
+             ->getMock();
 
-        $link->method('getPrettyConstraint')->willReturn('1.2.3');
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
+        $rfs
             ->expects($this->once())
-            ->method('createRepository')
-            ->with(
-                $this->anything(),
-                $this->callback(function ($config) use ($key) {
-                    return strpos(
-                        $config['package']['dist']['url'],
-                        '&k='.$key
-                    ) !== false;
-                })
-            )
-            ->willReturn($repositoryInterface);
+            ->method('getOptions')
+            ->willReturn([]);
 
-        // Mock Composer (returns the mocked RepositoryManager)
+        $rfs
+            ->expects($this->once())
+            ->method('isTlsDisabled')
+            ->willReturn(true);
+
+        // Mock Config
+        $config = $this
+                ->getMockBuilder('Composer\Config')
+                ->getMock();
+
+        // Mock Composer
         $composer = $this
                   ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->setMethods(['getConfig'])
                   ->getMock();
 
         $composer
-            ->expects($this->atLeast(1))
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
-
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
+            ->expects($this->once())
+            ->method('getConfig')
+            ->willReturn($config);
 
         // Mock IOInterface
         $io = $this
             ->getMockBuilder('Composer\IO\IOInterface')
             ->getMock();
 
-        // Activate Plugin
+        // Mock an Event
+        $event = $this
+               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+               ->disableOriginalConstructor()
+               ->setMethods([
+                   'getProcessedUrl',
+                   'getRemoteFilesystem',
+                   'setRemoteFilesystem'
+               ])
+               ->getMock();
+
+        $event
+            ->expects($this->once())
+            ->method('getProcessedUrl')
+            ->willReturn(self::REPO_URL);
+
+        $event
+            ->expects($this->once())
+            ->method('getRemoteFilesystem')
+            ->willReturn($rfs);
+
+        $event
+            ->expects($this->once())
+            ->method('setRemoteFilesystem')
+            ->with($this->callback(
+                function ($rfs) use ($key) {
+                    $this->assertAttributeContains(
+                        "&k=$key",
+                        'acfFileUrl',
+                        $rfs
+                    );
+                    return true;
+                }
+            ));
+
+        // Call addKey
         $plugin = new Plugin();
         $plugin->activate($composer, $io);
+        $plugin->addKey($event);
     }
 
     public function testPreferKeyFromEnv()
@@ -809,76 +877,83 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         // Make key available in the ENVIRONMENT
         putenv(self::KEY_ENV_VARIABLE . '=' . $key);
 
-        // Mock a Link (return by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->getMock();
+        // Mock a RemoteFilesystem
+        $rfs = $this
+             ->getMockBuilder('Composer\Util\RemoteFilesystem')
+             ->disableOriginalConstructor()
+             ->setMethods(['getOptions', 'isTlsDisabled'])
+             ->getMock();
 
-        $link->method('getPrettyConstraint')->willReturn('1.2.3');
-
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
-
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
-
-        // Mock a RepositoryInterface (returned by createRepository)
-        $repositoryInterface = $this
-                             ->getMockBuilder(
-                                 'Composer\Repository\RepositoryInterface'
-                             )
-                             ->getMock();
-
-        // Mock a RepositoryManager
-        $repositoryManager = $this
-                           ->getMockBuilder(
-                               'Composer\Repository\RepositoryManager'
-                           )
-                           ->disableOriginalConstructor()
-                           ->setMethods(['createRepository'])
-                           ->getMock();
-
-        $repositoryManager
+        $rfs
             ->expects($this->once())
-            ->method('createRepository')
-            ->with(
-                $this->anything(),
-                $this->callback(function ($config) use ($key) {
-                    return strpos(
-                        $config['package']['dist']['url'],
-                        '&k='.$key
-                    ) !== false;
-                })
-            )
-            ->willReturn($repositoryInterface);
+            ->method('getOptions')
+            ->willReturn([]);
 
-        // Mock Composer (returns the mocked RepositoryManager)
+        $rfs
+            ->expects($this->once())
+            ->method('isTlsDisabled')
+            ->willReturn(true);
+
+        // Mock Config
+        $config = $this
+                ->getMockBuilder('Composer\Config')
+                ->getMock();
+
+        // Mock Composer
         $composer = $this
                   ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
+                  ->setMethods(['getConfig'])
                   ->getMock();
 
         $composer
-            ->expects($this->atLeast(1))
-            ->method('getRepositoryManager')
-            ->willReturn($repositoryManager);
-
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
+            ->expects($this->once())
+            ->method('getConfig')
+            ->willReturn($config);
 
         // Mock IOInterface
         $io = $this
             ->getMockBuilder('Composer\IO\IOInterface')
             ->getMock();
 
-        // Activate Plugin
+        // Mock an Event
+        $event = $this
+               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+               ->disableOriginalConstructor()
+               ->setMethods([
+                   'getProcessedUrl',
+                   'getRemoteFilesystem',
+                   'setRemoteFilesystem'
+               ])
+               ->getMock();
+
+        $event
+            ->expects($this->once())
+            ->method('getProcessedUrl')
+            ->willReturn(self::REPO_URL);
+
+        $event
+            ->expects($this->once())
+            ->method('getRemoteFilesystem')
+            ->willReturn($rfs);
+
+        $event
+            ->expects($this->once())
+            ->method('setRemoteFilesystem')
+            ->with($this->callback(
+                function ($rfs) use ($key) {
+                    $this->assertAttributeContains(
+                        "&k=$key",
+                        'acfFileUrl',
+                        $rfs
+                    );
+                    return true;
+                }
+            ));
+
+        // Call addKey
         $plugin = new Plugin();
         $plugin->activate($composer, $io);
+        $plugin->addKey($event);
     }
 
     public function testThrowExceptionWhenKeyIsMissing()
@@ -889,44 +964,68 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             'ACF_PRO_KEY'
         );
 
-        // Mock a Link (returned by getRequires)
-        $link = $this->getMockBuilder('Composer\Package\Link')
-              ->disableOriginalConstructor()
-              ->setMethods(['getPrettyConstraint'])
-              ->getMock();
+        // Mock a RemoteFilesystem
+        $rfs = $this
+             ->getMockBuilder('Composer\Util\RemoteFilesystem')
+             ->disableOriginalConstructor()
+             ->getMock();
 
-        $link
-            ->method('getPrettyConstraint')
-            ->willReturn('1.2.3');
+        // Mock an Event
+        $event = $this
+               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+               ->disableOriginalConstructor()
+               ->setMethods([
+                   'getProcessedUrl',
+                   'getRemoteFilesystem'
+               ])
+               ->getMock();
 
-        // Mock a RootPackageInterface (returned by getPackage)
-        $rootPackageInterface = $this
-                              ->getMockBuilder(
-                                  'Composer\Package\RootPackageInterface'
-                              )
-                              ->setMethods(['getRequires'])
-                              ->getMockForAbstractClass();
+        $event
+            ->expects($this->once())
+            ->method('getProcessedUrl')
+            ->willReturn(self::REPO_URL);
 
-        $rootPackageInterface
-            ->method('getRequires')
-            ->willReturn([self::REPO_NAME => $link]);
+        $event
+            ->expects($this->once())
+            ->method('getRemoteFilesystem')
+            ->willReturn($rfs);
 
-        // Mock Composer
-        $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getRepositoryManager', 'getPackage'])
-                  ->getMock();
-
-        $composer->expects($this->never())->method('getRepositoryManager');
-        $composer->method('getPackage')->willReturn($rootPackageInterface);
-
-        // Mock IOInterface
-        $io = $this
-            ->getMockBuilder('Composer\IO\IOInterface')
-            ->getMock();
-
-        // Activate Plugin
+        // Call addKey
         $plugin = new Plugin();
-        $plugin->activate($composer, $io);
+        $plugin->addKey($event);
+    }
+
+    public function testOnlyAddKeyOnAcfUrl()
+    {
+        // Make key available in the ENVIRONMENT
+        putenv(self::KEY_ENV_VARIABLE . '=KEY');
+
+        // Mock an Event
+        $event = $this
+               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+               ->disableOriginalConstructor()
+               ->setMethods([
+                   'getProcessedUrl',
+                   'getRemoteFilesystem',
+                   'setRemoteFilesystem'
+               ])
+               ->getMock();
+
+        $event
+            ->expects($this->once())
+            ->method('getProcessedUrl')
+            ->willReturn('another-url');
+
+        $event
+            ->expects($this->never())
+            ->method('getRemoteFilesystem');
+
+        $event
+            ->expects($this->never())
+            ->method('setRemoteFilesystem');
+
+        // Call addKey
+        $plugin = new Plugin();
+        $plugin->addKey($event);
     }
 }
