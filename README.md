@@ -29,7 +29,7 @@ It reads your :key: ACF PRO key from the **environment** or a **.env file**.
       "url": "https://connect.advancedcustomfields.com/index.php?p=pro&a=download"
     },
     "require": {
-      "philippbaschke/acf-pro-installer": "^0.2",
+      "philippbaschke/acf-pro-installer": "^1.0",
       "composer/installers": "^1.0"
     }
   }
