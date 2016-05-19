@@ -298,7 +298,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         $plugin->addVersion($packageEvent);
     }
 
-    public function testExactVersionPassesValidation()
+    protected function versionPassesValidationHelper($version)
     {
         // Make key available in the ENVIRONMENT
         putenv(self::KEY_ENV_VARIABLE . '=KEY');
@@ -322,7 +322,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         $package
             ->expects($this->once())
             ->method('getPrettyVersion')
-            ->willReturn('1.2.3');
+            ->willReturn($version);
 
         $package
             ->expects($this->once())
@@ -369,13 +369,23 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         $plugin->addVersion($packageEvent);
     }
 
+    public function testExactVersionWith3DigitsPassesValidation()
+    {
+        $this->versionPassesValidationHelper('1.2.3');
+    }
+
+    public function testExactVersionWith4DigitsPassesValidation()
+    {
+        $this->versionPassesValidationHelper('1.2.3.4');
+    }
+
     protected function versionFailsValidationHelper($version)
     {
         // Expect an Exception
         $this->setExpectedException(
             'UnexpectedValueException',
             'The version constraint of ' . self::REPO_NAME .
-            ' should be exact (with 3 digits). ' .
+            ' should be exact (with 3 or 4 digits). ' .
             'Invalid version string "' . $version . '"'
         );
 
@@ -442,11 +452,6 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     public function testExactVersionWith1DigitsFailsValidation()
     {
         $this->versionFailsValidationHelper('1');
-    }
-
-    public function testExactVersionWith4DigitsFailsValidation()
-    {
-        $this->versionFailsValidationHelper('1.2.3.4');
     }
 
     public function testDontAddVersionTwice()
