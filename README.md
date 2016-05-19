@@ -22,7 +22,7 @@ It reads your :key: ACF PRO key from the **environment** or a **.env file**.
   "type": "package",
   "package": {
     "name": "advanced-custom-fields/advanced-custom-fields-pro",
-    "version": "*.*.*",
+    "version": "*.*.*(.*)",
     "type": "wordpress-plugin",
     "dist": {
       "type": "zip",
@@ -35,7 +35,7 @@ It reads your :key: ACF PRO key from the **environment** or a **.env file**.
   }
 }
 ```
-Replace `"version": "*.*.*"` with your desired version.
+Replace `"version": "*.*.*(.*)"` with your desired version.
 
 **2. Make your ACF PRO key available**
 
