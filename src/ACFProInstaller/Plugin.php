@@ -170,10 +170,10 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * Validate that the version is an exact major.minor.patch version
+     * Validate that the version is an exact major.minor.patch.optional version
      *
      * The url to download the code for the package only works with exact
-     * version numbers with 3 digits: e.g. 1.2.3
+     * version numbers with 3 or 4 digits: e.g. 1.2.3 or 1.2.3.4
      *
      * @access protected
      * @param string $version The version that should be validated
@@ -184,12 +184,12 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     {
         // \A = start of string, \Z = end of string
         // See: http://stackoverflow.com/a/34994075
-        $major_minor_patch = '/\A\d\.\d\.\d\Z/';
+        $major_minor_patch_optional = '/\A\d\.\d\.\d(?:\.\d)?\Z/';
 
-        if (!preg_match($major_minor_patch, $version)) {
+        if (!preg_match($major_minor_patch_optional, $version)) {
             throw new \UnexpectedValueException(
                 'The version constraint of ' . self::ACF_PRO_PACKAGE_NAME .
-                ' should be exact (with 3 digits). ' .
+                ' should be exact (with 3 or 4 digits). ' .
                 'Invalid version string "' . $version . '"'
             );
         }
