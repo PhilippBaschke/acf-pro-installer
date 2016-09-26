@@ -61,5 +61,5 @@ If you use **`*`**, composer will install the version from the package repositor
 
 [composer-repositories]: https://getcomposer.org/doc/04-schema.md#repositories
 [composer-versions]: https://getcomposer.org/doc/articles/versions.md
-[package-gist]: https://gist.github.com/dmalatesta/4fae4490caef712a51bf
+[package-gist]: https://gist.github.com/fThues/705da4c6574a4441b488
 [acf-account]: https://www.advancedcustomfields.com/my-account/
