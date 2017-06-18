@@ -37,6 +37,8 @@ It reads your :key: ACF PRO key from the **environment** or a **.env file**.
 ```
 Replace `"version": "*.*.*(.*)"` with your desired version.
 
+Replace `"type": "wordpress-plugin"` with `"type": "library"` if you would like to have ACF PRO installed in the `./vendor` directory instead of `./wp-content/plugins`. This may be desireable if for example, you are including ACF PRO in a WordPress theme.
+
 **2. Make your ACF PRO key available**
 
 Set the environment variable **`ACF_PRO_KEY`** to your [ACF PRO key][acf-account].
