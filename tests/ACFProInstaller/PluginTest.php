@@ -75,7 +75,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         $subscribedEvents = Plugin::getSubscribedEvents();
         $this->assertEquals(
             $subscribedEvents[PluginEvents::PRE_FILE_DOWNLOAD],
-            'addKey'
+            [ 'addKey', -1 ]
         );
     }
 
