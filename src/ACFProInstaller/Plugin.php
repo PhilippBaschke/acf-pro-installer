@@ -10,7 +10,8 @@ use Composer\Plugin\PluginEvents;
 use Composer\Plugin\PluginInterface;
 use Composer\Plugin\PreFileDownloadEvent;
 use Dotenv\Dotenv;
-use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException;
+use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyFromEnvironmentException;
+use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyFromComposerExtraException;
 
 /**
  * A composer plugin that makes installing ACF PRO possible
@@ -32,6 +33,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      * where the ACF PRO key should be stored.
      */
     const KEY_ENV_VARIABLE = 'ACF_PRO_KEY';
+    const KEY_COMPOSER_EXTRA_VARIABLE = 'advanced-custom-fields-pro-key';
 
     /**
      * The name of the ACF PRO package
@@ -141,7 +143,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
                 $this->addParameterToUrl(
                     $processedUrl,
                     'k',
-                    $this->getKeyFromEnv()
+                    $this->getKey()
                 ),
                 $this->io,
                 $this->composer->getConfig(),
@@ -210,6 +212,22 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
+     * Get the ACF PRO key from the composer extra section or from the environment
+     *
+     * @access protected
+     * @return string The key from the composer extra section or from the environment
+     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException
+     */
+    protected function getKey()
+    {
+        try {
+            return $this->getKeyFromEnv();
+        } catch (MissingKeyFromEnvironmentException $e) {
+            return $this->getKeyFromComposerExtra();
+        }
+    }
+
+    /**
      * Get the ACF PRO key from the environment
      *
      * Loads the .env file that is in the same directory as composer.json
@@ -219,7 +237,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      *
      * @access protected
      * @return string The key from the environment
-     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException
+     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyFromEnvironmentException
      */
     protected function getKeyFromEnv()
     {
@@ -227,7 +245,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         $key = getenv(self::KEY_ENV_VARIABLE);
 
         if (!$key) {
-            throw new MissingKeyException(self::KEY_ENV_VARIABLE);
+            throw new MissingKeyFromEnvironmentException(self::KEY_ENV_VARIABLE);
         }
 
         return $key;
@@ -246,6 +264,32 @@ class Plugin implements PluginInterface, EventSubscriberInterface
             $dotenv = new Dotenv(getcwd());
             $dotenv->load();
         }
+    }
+
+    /**
+     * Get the ACF PRO key from the composer extra section
+     *
+     * Checks if there is a key avaiable in the composer.json extra section
+     * and gets the key from the variable KEY_COMPOSER_EXTRA_VARIABLE.
+     * Already set environment variable will not be overwritten by composer.json
+     *
+     * @access protected
+     * @return string The key from the environment
+     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyFromComposerExtraException
+     */
+    protected function getKeyFromComposerExtra()
+    {
+        if ($this->composer) {
+            if ($package = $this->composer->getPackage()) {
+                if ($extra = $package->getExtra()) {
+                    if (isset($extra[self::KEY_COMPOSER_EXTRA_VARIABLE])) {
+                        return $extra[self::KEY_COMPOSER_EXTRA_VARIABLE];
+                    }
+                }
+            }
+        }
+
+        throw new MissingKeyFromComposerExtraException(self::KEY_COMPOSER_EXTRA_VARIABLE);
     }
 
     /**

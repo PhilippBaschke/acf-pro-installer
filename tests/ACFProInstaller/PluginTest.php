@@ -11,6 +11,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     const REPO_URL =
       'https://connect.advancedcustomfields.com/index.php?p=pro&a=download';
     const KEY_ENV_VARIABLE = 'ACF_PRO_KEY';
+    const KEY_COMPOSER_EXTRA_VARIABLE = 'advanced-custom-fields-pro-key';
 
     protected function tearDown()
     {
@@ -966,12 +967,114 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         $plugin->addKey($event);
     }
 
+    public function testAddKeyFromComposerExtra()
+    {
+        $key = 'COMPOSER_EXTRA_KEY';
+        $extra = [self::KEY_COMPOSER_EXTRA_VARIABLE => $key];
+
+        // Mock a Package
+        $package = $this
+            ->getMockBuilder('Composer\Package\PackageInterface')
+            ->setMethods(['getExtra'])
+            ->getMockForAbstractClass();
+
+        $package
+            ->expects($this->once())
+            ->method('getExtra')
+            ->willReturn($extra);
+
+        // Mock Config
+        $config = $this
+            ->getMockBuilder('Composer\Config')
+            ->getMock();
+
+        // Mock Composer
+        $composer = $this
+            ->getMockBuilder('Composer\Composer')
+            ->setMethods([
+                'getConfig',
+                'getPackage'
+            ])
+            ->getMock();
+
+        $composer
+            ->expects($this->once())
+            ->method('getConfig')
+            ->willReturn($config);
+
+        $composer
+            ->expects($this->once())
+            ->method('getPackage')
+            ->willReturn($package);
+
+        // Mock a RemoteFilesystem
+        $rfs = $this
+            ->getMockBuilder('Composer\Util\RemoteFilesystem')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOptions', 'isTlsDisabled'])
+            ->getMock();
+
+        $rfs
+            ->expects($this->once())
+            ->method('getOptions')
+            ->willReturn([]);
+
+        $rfs
+            ->expects($this->once())
+            ->method('isTlsDisabled')
+            ->willReturn(true);
+
+        // Mock IOInterface
+        $io = $this
+            ->getMockBuilder('Composer\IO\IOInterface')
+            ->getMock();
+
+        // Mock an Event
+        $event = $this
+            ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+            ->disableOriginalConstructor()
+            ->setMethods([
+                'getProcessedUrl',
+                'getRemoteFilesystem',
+                'setRemoteFilesystem'
+            ])
+            ->getMock();
+
+        $event
+            ->expects($this->once())
+            ->method('getProcessedUrl')
+            ->willReturn(self::REPO_URL);
+
+        $event
+            ->expects($this->once())
+            ->method('getRemoteFilesystem')
+            ->willReturn($rfs);
+
+        $event
+            ->expects($this->once())
+            ->method('setRemoteFilesystem')
+            ->with($this->callback(
+                function ($rfs) use ($key) {
+                    $this->assertAttributeContains(
+                        "&k=$key",
+                        'acfFileUrl',
+                        $rfs
+                    );
+                    return true;
+                }
+            ));
+
+        // Call addKey
+        $plugin = new Plugin();
+        $plugin->activate($composer, $io);
+        $plugin->addKey($event);
+    }
+
     public function testThrowExceptionWhenKeyIsMissing()
     {
         // Expect an Exception
         $this->setExpectedException(
-            'PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException',
-            'ACF_PRO_KEY'
+            'PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException'
         );
 
         // Mock a RemoteFilesystem

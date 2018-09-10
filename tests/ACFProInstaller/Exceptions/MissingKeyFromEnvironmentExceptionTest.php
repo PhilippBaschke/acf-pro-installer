@@ -1,13 +1,13 @@
 <?php namespace PhilippBaschke\ACFProInstaller\Test\Exceptions;
 
-use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException;
+use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyFromEnvironmentException;
 
-class MissingKeyExceptionTest extends \PHPUnit_Framework_TestCase
+class MissingKeyFromEnvironmentExceptionTest extends \PHPUnit_Framework_TestCase
 {
     public function testMessage()
     {
         $message = 'FIELD';
-        $e = new MissingKeyException($message);
+        $e = new MissingKeyFromEnvironmentException($message);
         $this->assertEquals(
             'Could not find a key for ACF PRO. ' .
             'Please make it available via the environment variable ' .

@@ -50,6 +50,16 @@ Alternatively you can add an entry to your **`.env`** file:
 ACF_PRO_KEY=Your-Key-Here
 ```
 
+Or you can add an entry to your **`composer.json`** file:
+
+```json
+{
+  "extra": {
+    "advanced-custom-fields-pro-key": "Your-Key-Here"
+  }
+}
+```
+
 **3. Require ACF PRO**
 
 ```sh
