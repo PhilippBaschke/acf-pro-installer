@@ -1,5 +1,5 @@
 {
-  "name": "philippbaschke/acf-pro-installer",
+  "name": "jezemery/acf-pro-installer",
   "description": "An install helper for Advanced Custom Fields PRO",
   "type": "composer-plugin",
   "license": "MIT",
@@ -7,13 +7,17 @@
     {
       "name": "Philipp Baschke",
       "email": "philipp@baschke.com"
+    },
+    {
+      "name": "Jez Emery",
+      "email": "github@hiohzo.com"
     }
   ],
   "keywords": [
     "wordpress", "composer", "wp", "plugin", "acf", "env", "pro"
   ],
   "require": {
-    "php": ">=5.5",
+    "php": ">=5.6",
     "composer-plugin-api": "^1.0",
     "vlucas/phpdotenv": "^2.2"
   },
