@@ -9,7 +9,8 @@ install:
   - composer install --no-interaction
 
 script:
-  - sonar-scanner -X
+  - composer run-script test
+  - sonar-scanner
 
 # No need for email notifications
 notifications:
