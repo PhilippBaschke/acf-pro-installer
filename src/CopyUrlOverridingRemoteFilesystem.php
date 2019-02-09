@@ -1,14 +1,13 @@
-<?php namespace PhilippBaschke\ACFProInstaller;
+<?php namespace Pivvenit\Composer\Installers\ACFPro;
 
 use Composer\Config;
 use Composer\IO\IOInterface;
+use Composer\Util\RemoteFilesystem;
 
 /**
- * A composer remote filesystem for ACF PRO
- *
- * Makes it possible to copy files from a modified file url
+ * A composer remote filesystem that enables to use a different URL for copy
  */
-class RemoteFilesystem extends \Composer\Util\RemoteFilesystem
+class CopyUrlOverridingRemoteFilesystem extends RemoteFilesystem
 {
     /**
      * The file url that should be used instead of the given file url in copy
@@ -16,39 +15,40 @@ class RemoteFilesystem extends \Composer\Util\RemoteFilesystem
      * @access protected
      * @var string
      */
-    protected $acfFileUrl;
+    protected $realUrl;
 
-     /**
+    /**
      * Constructor
      *
      * @access public
-     * @param string $acfFileUrl The url that should be used instead of fileurl
+     * @param string $realUrl The url that should be used instead of fileurl
      * @param IOInterface $io The IO instance
      * @param Config $config The config
      * @param array $options The options
      * @param bool $disableTls
      */
     public function __construct(
-        $acfFileUrl,
+        $realUrl,
         IOInterface $io,
         Config $config = null,
         array $options = [],
         $disableTls = false
-    ) {
-        $this->acfFileUrl = $acfFileUrl;
+    )
+    {
+        $this->realUrl = $realUrl;
         parent::__construct($io, $config, $options, $disableTls);
     }
 
-     /**
+    /**
      * Copy the remote file in local
      *
-     * Use $acfFileUrl instead of the provided $fileUrl
+     * Uses the specified URL instead of the provided URL
      *
      * @param string $originUrl The origin URL
-     * @param string $fileUrl   The file URL (ignored)
-     * @param string $fileName  the local filename
-     * @param bool   $progress  Display the progression
-     * @param array  $options   Additional context options
+     * @param string $fileUrl The file URL (ignored)
+     * @param string $fileName the local filename
+     * @param bool $progress Display the progression
+     * @param array $options Additional context options
      *
      * @return bool true
      */
@@ -58,10 +58,11 @@ class RemoteFilesystem extends \Composer\Util\RemoteFilesystem
         $fileName,
         $progress = true,
         $options = []
-    ) {
+    )
+    {
         return parent::copy(
             $originUrl,
-            $this->acfFileUrl,
+            $this->realUrl,
             $fileName,
             $progress,
             $options

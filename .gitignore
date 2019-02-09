@@ -1,10 +1,8 @@
-# composer.lock
-# See: https://getcomposer.org/doc/02-libraries.md#lock-file
 composer.lock
-
-# composer vendor directory
 vendor
+.idea
 
 # phpunit code coverage report
 coverage
-build/logs/clover.xml
+build
+.phpunit.result.cache

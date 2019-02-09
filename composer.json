@@ -1,37 +1,37 @@
 {
-  "name": "philippbaschke/acf-pro-installer",
-  "description": "An install helper for Advanced Custom Fields PRO",
+  "name": "pivvenit/acf-pro-installer",
+  "description": "An Advanced Custom Fields PRO installer for composer",
   "type": "composer-plugin",
   "license": "MIT",
   "authors": [
     {
-      "name": "Philipp Baschke",
-      "email": "philipp@baschke.com"
+      "name": "Sander Klock",
+      "email": "support@pivvenit.nl"
     }
   ],
   "keywords": [
     "wordpress", "composer", "wp", "plugin", "acf", "env", "pro"
   ],
   "require": {
-    "php": ">=5.5",
-    "composer-plugin-api": "^1.0",
-    "vlucas/phpdotenv": "^2.2"
+    "php": ">=7.2",
+    "composer-plugin-api": "~1.1",
+    "vlucas/phpdotenv": "^3.0.0",
+    "league/uri-query-parser": "^1.0",
+    "league/uri-parser": "^1.4"
   },
   "require-dev": {
-    "composer/composer": "1.0.*",
-    "phpunit/phpunit": "4.8.*",
-    "squizlabs/php_codesniffer": "2.*",
-    "satooshi/php-coveralls": "1.*"
+    "composer/composer": "~1.8",
+    "phpunit/phpunit": "^8"
   },
   "autoload": {
-    "psr-4": { "PhilippBaschke\\ACFProInstaller\\": "src/ACFProInstaller" }
+    "psr-4": { "Pivvenit\\Composer\\Installers\\ACFPro\\": "src/" }
   },
   "extra": {
-    "class": "PhilippBaschke\\ACFProInstaller\\Plugin"
+    "class": "Pivvenit\\Composer\\Installers\\ACFPro\\ComposerPlugin"
   },
   "scripts": {
     "lint": "phpcs src tests --standard=PSR2",
-    "test": "phpunit",
+    "test": "./vendor/bin/phpunit --bootstrap vendor/autoload.php tests",
     "coverage": "phpunit --coverage-html coverage",
     "coveralls": "coveralls"
   }

@@ -1,31 +1,34 @@
-<?php namespace PhilippBaschke\ACFProInstaller;
+<?php namespace Pivvenit\Composer\Installers\ACFPro;
 
 use Composer\Composer;
+use Composer\DependencyResolver\Operation\InstallOperation;
+use Composer\DependencyResolver\Operation\MarkAliasInstalledOperation;
+use Composer\DependencyResolver\Operation\MarkAliasUninstalledOperation;
 use Composer\DependencyResolver\Operation\OperationInterface;
+use Composer\DependencyResolver\Operation\UninstallOperation;
+use Composer\DependencyResolver\Operation\UpdateOperation;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Installer\PackageEvent;
 use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
+use Composer\Package\Package;
+use Composer\Package\PackageInterface;
 use Composer\Plugin\PluginEvents;
 use Composer\Plugin\PluginInterface;
 use Composer\Plugin\PreFileDownloadEvent;
 use Dotenv\Dotenv;
-use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException;
+use League\Uri\Parser;
+use League\Uri\Parser\QueryString;
+use Pivvenit\Composer\Installers\ACFPro\Exceptions\MissingKeyException;
+use RuntimeException;
+use UnexpectedValueException;
+use function League\Uri\build;
 
 /**
- * A composer plugin that makes installing ACF PRO possible
- *
- * The WordPress plugin Advanced Custom Fields PRO (ACF PRO) does not
- * offer a way to install it via composer natively.
- *
- * This plugin uses a 'package' repository (user supplied) that downloads the
- * correct version from the ACF site using the version number from
- * that repository and a license key from the ENVIRONMENT or an .env file.
- *
- * With this plugin user no longer need to expose their license key in
- * composer.json.
+ * A composer plugin that enables the Advanced Custom Fields PRO wordpress plugin
+ * to be downloaded as composer plugin without needing to specify their key in the configuration
  */
-class Plugin implements PluginInterface, EventSubscriberInterface
+class AdvancedCustomFieldsInstallerPlugin implements PluginInterface, EventSubscriberInterface
 {
     /**
      * The name of the environment variable
@@ -65,7 +68,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      *
      * @access public
      * @param Composer $composer The composer object
-     * @param IOInterface $io Not used
+     * @param IOInterface $io
      */
     public function activate(Composer $composer, IOInterface $io)
     {
@@ -113,8 +116,11 @@ class Plugin implements PluginInterface, EventSubscriberInterface
 
         if ($package->getName() === self::ACF_PRO_PACKAGE_NAME) {
             $version = $this->validateVersion($package->getPrettyVersion());
+            if (!$package instanceof Package) {
+                throw new RuntimeException("Invalid package type for Advanced Custom Fields");
+            }
             $package->setDistUrl(
-                $this->addParameterToUrl($package->getDistUrl(), 't', $version)
+                $this->addOrOverwriteQueryParameters($package->getDistUrl(), ['t' => $version])
             );
         }
     }
@@ -134,21 +140,18 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     public function addKey(PreFileDownloadEvent $event)
     {
         $processedUrl = $event->getProcessedUrl();
+        $actualUrl = $this->getPrivatePackageUrl($processedUrl);
 
         if ($this->isAcfProPackageUrl($processedUrl)) {
-            $rfs = $event->getRemoteFilesystem();
-            $acfRfs = new RemoteFilesystem(
-                $this->addParameterToUrl(
-                    $processedUrl,
-                    'k',
-                    $this->getKeyFromEnv()
-                ),
+            $remoteFilesystem = $event->getRemoteFilesystem();
+            $acfRemoteFileSystem = new CopyUrlOverridingRemoteFilesystem(
+                $actualUrl,
                 $this->io,
                 $this->composer->getConfig(),
-                $rfs->getOptions(),
-                $rfs->isTlsDisabled()
+                $remoteFilesystem->getOptions(),
+                $remoteFilesystem->isTlsDisabled()
             );
-            $event->setRemoteFilesystem($acfRfs);
+            $event->setRemoteFilesystem($acfRemoteFileSystem);
         }
     }
 
@@ -161,12 +164,20 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      * @param OperationInterface $operation The operation
      * @return PackageInterface The package of the operation
      */
-    protected function getPackageFromOperation(OperationInterface $operation)
+    protected function getPackageFromOperation(OperationInterface $operation) : PackageInterface
     {
-        if ($operation->getJobType() === 'update') {
-            return $operation->getTargetPackage();
+        switch (true)
+        {
+            case $operation instanceof UpdateOperation:
+                return $operation->getTargetPackage();
+            case $operation instanceof InstallOperation:
+            case $operation instanceof MarkAliasInstalledOperation:
+            case $operation instanceof MarkAliasUninstalledOperation:
+            case $operation instanceof UninstallOperation:
+                return $operation->getPackage();
+            default:
+                throw new RuntimeException("Unknown Composer operation");
         }
-        return $operation->getPackage();
     }
 
     /**
@@ -219,7 +230,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      *
      * @access protected
      * @return string The key from the environment
-     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException
+     * @throws \Pivvenit\Composer\Installers\ACFPro\Exceptions\MissingKeyException
      */
     protected function getKeyFromEnv()
     {
@@ -243,48 +254,40 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     protected function loadDotEnv()
     {
         if (file_exists(getcwd().DIRECTORY_SEPARATOR.'.env')) {
-            $dotenv = new Dotenv(getcwd());
+            $dotenv = Dotenv::create(getcwd());
             $dotenv->load();
         }
     }
 
     /**
-     * Add a parameter to the given url
+     * Returns the actual package URL that includes the specified key
      *
-     * Adds the given parameter at the end of the given url. It only works with
-     * urls that already have parameters (e.g. test.com?p=true) because it
-     * uses & as a separation character.
-     *
-     * @access protected
-     * @param string $url The url that should be appended
-     * @param string $parameter The name of the parameter
-     * @param string $value The value of the parameter
-     * @return string The url appended with &parameter=value
+     * @param string $baseUrl
+     * @return mixed
+     * @throws MissingKeyException
      */
-    protected function addParameterToUrl($url, $parameter, $value)
+    private function getPrivatePackageUrl(string $baseUrl)
     {
-        $cleanUrl = $this->removeParameterFromUrl($url, $parameter);
-        $urlParameter = '&' . $parameter . '=' . urlencode($value);
-
-        return $cleanUrl .= $urlParameter;
+        // Parse Url
+        return $this->addOrOverwriteQueryParameters($baseUrl, [
+            'k' => $this->getKeyFromEnv()
+        ]);
     }
 
-    /**
-     * Remove a given parameter from the given url
-     *
-     * Removes &parameter=value from the given url. Only works with urls that
-     * have multiple parameters and the parameter that should be removed is
-     * not the first (because of the & character).
-     *
-     * @access protected
-     * @param string $url The url where the parameter should be removed
-     * @param string $parameter The name of the parameter
-     * @return string The url with the &parameter=value removed
-     */
-    protected function removeParameterFromUrl($url, $parameter)
-    {
-        // e.g. &t=1.2.3 in example.com?p=index.php&t=1.2.3&k=key
-        $pattern = "/(&$parameter=[^&]*)/";
-        return preg_replace($pattern, '', $url);
+    private function addOrOverwriteQueryParameters(string $baseUrl, array $queryParameters) {
+        $urlParser = new Parser();
+        $urlComponents = $urlParser->parse($baseUrl);
+
+        // Modify the query
+        $query = $urlComponents['query'];
+        $parameters = QueryString::parse($query);
+        foreach ($queryParameters as $key => $value) {
+            $parameters[$key] = $value;
+        }
+
+        // Rebuild full url
+        $query = QueryString::build($parameters);
+        $urlComponents['query'] = $query;
+        return build($urlComponents);
     }
 }

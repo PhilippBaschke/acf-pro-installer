@@ -1,10 +1,12 @@
-<?php namespace PhilippBaschke\ACFProInstaller\Test;
+<?php namespace Pivvenit\Composer\Installers\ACFPro\Tests;
 
 use Composer\Installer\PackageEvents;
 use Composer\Plugin\PluginEvents;
-use PhilippBaschke\ACFProInstaller\Plugin;
+use PHPUnit\Framework\TestCase;
+use Pivvenit\Composer\Installers\ACFPro\AdvancedCustomFieldsInstallerPlugin;
+use Pivvenit\Composer\Installers\ACFPro\Exceptions\MissingKeyException;
 
-class PluginTest extends \PHPUnit_Framework_TestCase
+class AdvancedCustomFieldsInstallerPluginTest extends TestCase
 {
     const REPO_NAME = 'advanced-custom-fields/advanced-custom-fields-pro';
     const REPO_TYPE = 'wordpress-plugin';
@@ -12,7 +14,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
       'https://connect.advancedcustomfields.com/index.php?p=pro&a=download';
     const KEY_ENV_VARIABLE = 'ACF_PRO_KEY';
 
-    protected function tearDown()
+    protected function tearDown() : void
     {
         // Unset the environment variable after every test
         // See: http://stackoverflow.com/a/34065522
@@ -29,7 +31,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     {
         $this->assertInstanceOf(
             'Composer\Plugin\PluginInterface',
-            new Plugin()
+            new AdvancedCustomFieldsInstallerPlugin()
         );
     }
 
@@ -37,24 +39,13 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     {
         $this->assertInstanceOf(
             'Composer\EventDispatcher\EventSubscriberInterface',
-            new Plugin()
+            new AdvancedCustomFieldsInstallerPlugin()
         );
-    }
-
-    public function testActivateMakesComposerAndIOAvailable()
-    {
-        $composer = $this->getMockBuilder('Composer\Composer')->getMock();
-        $io = $this->getMockBuilder('Composer\IO\IOInterface')->getMock();
-        $plugin = new Plugin;
-        $plugin->activate($composer, $io);
-
-        $this->assertAttributeEquals($composer, 'composer', $plugin);
-        $this->assertAttributeEquals($io, 'io', $plugin);
     }
 
     public function testSubscribesToPrePackageInstallEvent()
     {
-        $subscribedEvents = Plugin::getSubscribedEvents();
+        $subscribedEvents = AdvancedCustomFieldsInstallerPlugin::getSubscribedEvents();
         $this->assertEquals(
             $subscribedEvents[PackageEvents::PRE_PACKAGE_INSTALL],
             'addVersion'
@@ -63,7 +54,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
     public function testSubscribesToPreUpdateInstallEvent()
     {
-        $subscribedEvents = Plugin::getSubscribedEvents();
+        $subscribedEvents = AdvancedCustomFieldsInstallerPlugin::getSubscribedEvents();
         $this->assertEquals(
             $subscribedEvents[PackageEvents::PRE_PACKAGE_UPDATE],
             'addVersion'
@@ -72,7 +63,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
     public function testSubscribesToPreFileDownloadEvent()
     {
-        $subscribedEvents = Plugin::getSubscribedEvents();
+        $subscribedEvents = AdvancedCustomFieldsInstallerPlugin::getSubscribedEvents();
         $this->assertEquals(
             $subscribedEvents[PluginEvents::PRE_FILE_DOWNLOAD],
             'addKey'
@@ -150,7 +141,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->willReturn($operation);
 
         // Call addVersion
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addVersion($packageEvent);
     }
 
@@ -225,7 +216,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->willReturn($operation);
 
         // Call addVersion
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addVersion($packageEvent);
     }
 
@@ -294,7 +285,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->willReturn($operation);
 
         // Call addVersion
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addVersion($packageEvent);
     }
 
@@ -365,7 +356,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->willReturn($operation);
 
         // Call addVersion
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addVersion($packageEvent);
     }
 
@@ -387,7 +378,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     protected function versionFailsValidationHelper($version)
     {
         // Expect an Exception
-        $this->setExpectedException(
+        $this->expectException(
             'UnexpectedValueException',
             'The version constraint of ' . self::REPO_NAME .
             ' should be exact (with 3 or 4 digits). ' .
@@ -445,7 +436,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->willReturn($operation);
 
         // Call addVersion
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addVersion($packageEvent);
     }
 
@@ -530,7 +521,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->willReturn($operation);
 
         // Call addVersion
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addVersion($packageEvent);
     }
 
@@ -605,7 +596,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->willReturn($operation);
 
         // Call addVersion
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addVersion($packageEvent);
     }
 
@@ -690,7 +681,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ));
 
         // Call addKey
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->activate($composer, $io);
         $plugin->addKey($event);
     }
@@ -777,7 +768,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ));
 
         // Call addKey
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->activate($composer, $io);
         $plugin->addKey($event);
     }
@@ -867,7 +858,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ));
 
         // Call addKey
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->activate($composer, $io);
         $plugin->addKey($event);
     }
@@ -961,7 +952,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ));
 
         // Call addKey
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->activate($composer, $io);
         $plugin->addKey($event);
     }
@@ -969,8 +960,8 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     public function testThrowExceptionWhenKeyIsMissing()
     {
         // Expect an Exception
-        $this->setExpectedException(
-            'PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException',
+        $this->expectException(
+            MissingKeyException::class,
             'ACF_PRO_KEY'
         );
 
@@ -1001,7 +992,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->willReturn($rfs);
 
         // Call addKey
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addKey($event);
     }
 
@@ -1035,7 +1026,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
             ->method('setRemoteFilesystem');
 
         // Call addKey
-        $plugin = new Plugin();
+        $plugin = new AdvancedCustomFieldsInstallerPlugin();
         $plugin->addKey($event);
     }
 }
