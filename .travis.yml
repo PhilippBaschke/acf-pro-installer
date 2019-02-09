@@ -19,11 +19,12 @@ install:
 script:
   - composer lint
   - composer test
-
-# Send coverage report to coveralls.io
-after_success:
-  - travis_retry composer coveralls
+  - sonar-scanner
 
 # No need for email notifications
 notifications:
   email: false
+
+addons:
+  sonarcloud:
+    organization: pivvenit
