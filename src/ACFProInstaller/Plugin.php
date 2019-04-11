@@ -185,7 +185,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         // \A = start of string, \Z = end of string
         // See: http://stackoverflow.com/a/34994075
         // Slight amendment added to allow for beta and alpha versions ( for testing purposes )
-        $major_minor_patch_optional = '/\A\d\.\d\.\d{1,2}(?:\.\d)?(\-)?(alpha|beta)?(\d)?\Z/';
+        $major_minor_patch_optional = '/\A\d\.\d\.\d{1,2}(?:\.\d)?(\-)?(alpha|beta|rc|RC)?(\d)?\Z/';
 
         if (!preg_match($major_minor_patch_optional, $version)) {
             throw new \UnexpectedValueException(
