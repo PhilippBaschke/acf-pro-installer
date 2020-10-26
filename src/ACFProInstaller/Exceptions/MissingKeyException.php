@@ -1,4 +1,7 @@
-<?php namespace PhilippBaschke\ACFProInstaller\Exceptions;
+<?php
+declare(strict_types=1);
+
+namespace JezEmery\ACFProInstaller\Exceptions;
 
 /**
  * Exception thrown if the ACF PRO key is not available in the environment

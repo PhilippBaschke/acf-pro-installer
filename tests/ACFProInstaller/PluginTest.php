@@ -1,15 +1,18 @@
-<?php namespace PhilippBaschke\ACFProInstaller\Test;
+<?php
+declare(strict_types=1);
+
+namespace JezEmery\ACFProInstaller\Test;
 
 use Composer\Installer\PackageEvents;
 use Composer\Plugin\PluginEvents;
-use PhilippBaschke\ACFProInstaller\Plugin;
+use JezEmery\ACFProInstaller\Plugin;
 
 class PluginTest extends \PHPUnit_Framework_TestCase
 {
     const REPO_NAME = 'advanced-custom-fields/advanced-custom-fields-pro';
     const REPO_TYPE = 'wordpress-plugin';
     const REPO_URL =
-      'https://connect.advancedcustomfields.com/index.php?p=pro&a=download';
+        'https://connect.advancedcustomfields.com/index.php?p=pro&a=download';
     const KEY_ENV_VARIABLE = 'ACF_PRO_KEY';
 
     protected function tearDown()
@@ -19,7 +22,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         putenv(self::KEY_ENV_VARIABLE);
 
         // Delete the .env file
-        $dotenv = getcwd().DIRECTORY_SEPARATOR.'.env';
+        $dotenv = getcwd() . DIRECTORY_SEPARATOR . '.env';
         if (file_exists($dotenv)) {
             unlink($dotenv);
         }
@@ -74,11 +77,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     {
         $subscribedEvents = Plugin::getSubscribedEvents();
         $this->assertEquals(
-            $subscribedEvents[PluginEvents::PRE_FILE_DOWNLOAD],
+            $subscribedEvents[PluginEvents::COMMAND],
             'addKey'
         );
     }
 
+    /**
+     *
+     */
     public function testAddVersionOnInstall()
     {
         // The version that should be required
@@ -89,14 +95,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a Package
         $package = $this
-                 ->getMockBuilder('Composer\Package\PackageInterface')
-                 ->setMethods([
-                     'getName',
-                     'getPrettyVersion',
-                     'getDistUrl',
-                     'setDistUrl'
-                 ])
-                 ->getMockForAbstractClass();
+            ->getMockBuilder('Composer\Package\PackageInterface')
+            ->setMethods([
+                'getName',
+                'getPrettyVersion',
+                'getDistUrl',
+                'setDistUrl'
+            ])
+            ->getMockForAbstractClass();
 
         $package
             ->expects($this->once())
@@ -120,17 +126,12 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Operation
         $operationClass =
-        'Composer\DependencyResolver\Operation\InstallOperation';
+            'Composer\DependencyResolver\Operation\InstallOperation';
         $operation = $this
-                          ->getMockBuilder($operationClass)
-                          ->disableOriginalConstructor()
-                          ->setMethods(['getJobType', 'getPackage'])
-                          ->getMock();
-
-        $operation
-            ->expects($this->once())
-            ->method('getJobType')
-            ->willReturn('install');
+            ->getMockBuilder($operationClass)
+            ->disableOriginalConstructor()
+            ->setMethods(['getPackage'])
+            ->getMock();
 
         $operation
             ->expects($this->once())
@@ -139,10 +140,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a PackageEvent
         $packageEvent = $this
-                      ->getMockBuilder('Composer\Installer\PackageEvent')
-                      ->disableOriginalConstructor()
-                      ->setMethods(['getOperation'])
-                      ->getMock();
+            ->getMockBuilder('Composer\Installer\PackageEvent')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOperation'])
+            ->getMock();
 
         $packageEvent
             ->expects($this->once())
@@ -164,14 +165,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a Package
         $package = $this
-                 ->getMockBuilder('Composer\Package\PackageInterface')
-                 ->setMethods([
-                     'getName',
-                     'getPrettyVersion',
-                     'getDistUrl',
-                     'setDistUrl'
-                 ])
-                 ->getMockForAbstractClass();
+            ->getMockBuilder('Composer\Package\PackageInterface')
+            ->setMethods([
+                'getName',
+                'getPrettyVersion',
+                'getDistUrl',
+                'setDistUrl'
+            ])
+            ->getMockForAbstractClass();
 
         $package
             ->expects($this->once())
@@ -195,17 +196,12 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Operation
         $operationClass =
-        'Composer\DependencyResolver\Operation\UpdateOperation';
+            'Composer\DependencyResolver\Operation\UpdateOperation';
         $operation = $this
-                          ->getMockBuilder($operationClass)
-                          ->disableOriginalConstructor()
-                          ->setMethods(['getJobType', 'getTargetPackage'])
-                          ->getMock();
-
-        $operation
-            ->expects($this->once())
-            ->method('getJobType')
-            ->willReturn('update');
+            ->getMockBuilder($operationClass)
+            ->disableOriginalConstructor()
+            ->setMethods(['getTargetPackage'])
+            ->getMock();
 
         $operation
             ->expects($this->once())
@@ -214,10 +210,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a PackageEvent
         $packageEvent = $this
-                      ->getMockBuilder('Composer\Installer\PackageEvent')
-                      ->disableOriginalConstructor()
-                      ->setMethods(['getOperation'])
-                      ->getMock();
+            ->getMockBuilder('Composer\Installer\PackageEvent')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOperation'])
+            ->getMock();
 
         $packageEvent
             ->expects($this->once())
@@ -236,14 +232,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a Package
         $package = $this
-                 ->getMockBuilder('Composer\Package\PackageInterface')
-                 ->setMethods([
-                     'getName',
-                     'getPrettyVersion',
-                     'getDistUrl',
-                     'setDistUrl'
-                 ])
-                 ->getMockForAbstractClass();
+            ->getMockBuilder('Composer\Package\PackageInterface')
+            ->setMethods([
+                'getName',
+                'getPrettyVersion',
+                'getDistUrl',
+                'setDistUrl'
+            ])
+            ->getMockForAbstractClass();
 
         $package
             ->expects($this->once())
@@ -264,17 +260,12 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Operation
         $operationClass =
-        'Composer\DependencyResolver\Operation\InstallOperation';
+            'Composer\DependencyResolver\Operation\InstallOperation';
         $operation = $this
-                          ->getMockBuilder($operationClass)
-                          ->disableOriginalConstructor()
-                          ->setMethods(['getJobType', 'getPackage'])
-                          ->getMock();
-
-        $operation
-            ->expects($this->once())
-            ->method('getJobType')
-            ->willReturn('install');
+            ->getMockBuilder($operationClass)
+            ->disableOriginalConstructor()
+            ->setMethods(['getPackage'])
+            ->getMock();
 
         $operation
             ->expects($this->once())
@@ -283,10 +274,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a PackageEvent
         $packageEvent = $this
-                      ->getMockBuilder('Composer\Installer\PackageEvent')
-                      ->disableOriginalConstructor()
-                      ->setMethods(['getOperation'])
-                      ->getMock();
+            ->getMockBuilder('Composer\Installer\PackageEvent')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOperation'])
+            ->getMock();
 
         $packageEvent
             ->expects($this->once())
@@ -305,14 +296,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a Package
         $package = $this
-                 ->getMockBuilder('Composer\Package\PackageInterface')
-                 ->setMethods([
-                     'getName',
-                     'getPrettyVersion',
-                     'getDistUrl',
-                     'setDistUrl'
-                 ])
-                 ->getMockForAbstractClass();
+            ->getMockBuilder('Composer\Package\PackageInterface')
+            ->setMethods([
+                'getName',
+                'getPrettyVersion',
+                'getDistUrl',
+                'setDistUrl'
+            ])
+            ->getMockForAbstractClass();
 
         $package
             ->expects($this->once())
@@ -335,17 +326,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Operation
         $operationClass =
-        'Composer\DependencyResolver\Operation\InstallOperation';
+            'Composer\DependencyResolver\Operation\InstallOperation';
         $operation = $this
-                          ->getMockBuilder($operationClass)
-                          ->disableOriginalConstructor()
-                          ->setMethods(['getJobType', 'getPackage'])
-                          ->getMock();
+            ->getMockBuilder($operationClass)
+            ->disableOriginalConstructor()
+            ->setMethods(['getPackage'])
+            ->getMock();
 
-        $operation
-            ->expects($this->once())
-            ->method('getJobType')
-            ->willReturn('install');
+        
 
         $operation
             ->expects($this->once())
@@ -354,10 +342,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a PackageEvent
         $packageEvent = $this
-                      ->getMockBuilder('Composer\Installer\PackageEvent')
-                      ->disableOriginalConstructor()
-                      ->setMethods(['getOperation'])
-                      ->getMock();
+            ->getMockBuilder('Composer\Installer\PackageEvent')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOperation'])
+            ->getMock();
 
         $packageEvent
             ->expects($this->once())
@@ -383,7 +371,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     {
         $this->versionPassesValidationHelper('1.2.30');
     }
-    
+
     public function testExactVersionWithPatchDoubleDigitsBetaVersionPassesValidation()
     {
         $this->versionPassesValidationHelper('1.2.30-beta3');
@@ -401,12 +389,12 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a Package
         $package = $this
-                 ->getMockBuilder('Composer\Package\PackageInterface')
-                 ->setMethods([
-                     'getName',
-                     'getPrettyVersion'
-                 ])
-                 ->getMockForAbstractClass();
+            ->getMockBuilder('Composer\Package\PackageInterface')
+            ->setMethods([
+                'getName',
+                'getPrettyVersion'
+            ])
+            ->getMockForAbstractClass();
 
         $package
             ->expects($this->once())
@@ -420,17 +408,12 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Operation
         $operationClass =
-        'Composer\DependencyResolver\Operation\InstallOperation';
+            'Composer\DependencyResolver\Operation\InstallOperation';
         $operation = $this
-                          ->getMockBuilder($operationClass)
-                          ->disableOriginalConstructor()
-                          ->setMethods(['getJobType', 'getPackage'])
-                          ->getMock();
-
-        $operation
-            ->expects($this->once())
-            ->method('getJobType')
-            ->willReturn('install');
+            ->getMockBuilder($operationClass)
+            ->disableOriginalConstructor()
+            ->setMethods(['getPackage'])
+            ->getMock();
 
         $operation
             ->expects($this->once())
@@ -439,10 +422,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a PackageEvent
         $packageEvent = $this
-                      ->getMockBuilder('Composer\Installer\PackageEvent')
-                      ->disableOriginalConstructor()
-                      ->setMethods(['getOperation'])
-                      ->getMock();
+            ->getMockBuilder('Composer\Installer\PackageEvent')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOperation'])
+            ->getMock();
 
         $packageEvent
             ->expects($this->once())
@@ -474,14 +457,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a Package
         $package = $this
-                 ->getMockBuilder('Composer\Package\PackageInterface')
-                 ->setMethods([
-                     'getName',
-                     'getPrettyVersion',
-                     'getDistUrl',
-                     'setDistUrl'
-                 ])
-                 ->getMockForAbstractClass();
+            ->getMockBuilder('Composer\Package\PackageInterface')
+            ->setMethods([
+                'getName',
+                'getPrettyVersion',
+                'getDistUrl',
+                'setDistUrl'
+            ])
+            ->getMockForAbstractClass();
 
         $package
             ->expects($this->once())
@@ -505,17 +488,12 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Operation
         $operationClass =
-        'Composer\DependencyResolver\Operation\InstallOperation';
+            'Composer\DependencyResolver\Operation\InstallOperation';
         $operation = $this
-                          ->getMockBuilder($operationClass)
-                          ->disableOriginalConstructor()
-                          ->setMethods(['getJobType', 'getPackage'])
-                          ->getMock();
-
-        $operation
-            ->expects($this->once())
-            ->method('getJobType')
-            ->willReturn('install');
+            ->getMockBuilder($operationClass)
+            ->disableOriginalConstructor()
+            ->setMethods(['getPackage'])
+            ->getMock();
 
         $operation
             ->expects($this->once())
@@ -524,10 +502,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a PackageEvent
         $packageEvent = $this
-                      ->getMockBuilder('Composer\Installer\PackageEvent')
-                      ->disableOriginalConstructor()
-                      ->setMethods(['getOperation'])
-                      ->getMock();
+            ->getMockBuilder('Composer\Installer\PackageEvent')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOperation'])
+            ->getMock();
 
         $packageEvent
             ->expects($this->once())
@@ -549,14 +527,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a Package
         $package = $this
-                 ->getMockBuilder('Composer\Package\PackageInterface')
-                 ->setMethods([
-                     'getName',
-                     'getPrettyVersion',
-                     'getDistUrl',
-                     'setDistUrl'
-                 ])
-                 ->getMockForAbstractClass();
+            ->getMockBuilder('Composer\Package\PackageInterface')
+            ->setMethods([
+                'getName',
+                'getPrettyVersion',
+                'getDistUrl',
+                'setDistUrl'
+            ])
+            ->getMockForAbstractClass();
 
         $package
             ->expects($this->once())
@@ -580,17 +558,12 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Operation
         $operationClass =
-        'Composer\DependencyResolver\Operation\InstallOperation';
+            'Composer\DependencyResolver\Operation\InstallOperation';
         $operation = $this
-                          ->getMockBuilder($operationClass)
-                          ->disableOriginalConstructor()
-                          ->setMethods(['getJobType', 'getPackage'])
-                          ->getMock();
-
-        $operation
-            ->expects($this->once())
-            ->method('getJobType')
-            ->willReturn('install');
+            ->getMockBuilder($operationClass)
+            ->disableOriginalConstructor()
+            ->setMethods(['getPackage'])
+            ->getMock();
 
         $operation
             ->expects($this->once())
@@ -599,10 +572,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a PackageEvent
         $packageEvent = $this
-                      ->getMockBuilder('Composer\Installer\PackageEvent')
-                      ->disableOriginalConstructor()
-                      ->setMethods(['getOperation'])
-                      ->getMock();
+            ->getMockBuilder('Composer\Installer\PackageEvent')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOperation'])
+            ->getMock();
 
         $packageEvent
             ->expects($this->once())
@@ -624,31 +597,26 @@ class PluginTest extends \PHPUnit_Framework_TestCase
         $tlsDisabled = true;
 
         $rfs = $this
-             ->getMockBuilder('Composer\Util\RemoteFilesystem')
-             ->disableOriginalConstructor()
-             ->setMethods(['getOptions', 'isTlsDisabled'])
-             ->getMock();
+            ->getMockBuilder('Composer\Util\HttpDownloader')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOptions'])
+            ->getMock();
 
         $rfs
             ->expects($this->once())
             ->method('getOptions')
             ->willReturn($options);
 
-        $rfs
-            ->expects($this->once())
-            ->method('isTlsDisabled')
-            ->willReturn($tlsDisabled);
-
         // Mock Config
         $config = $this
-                ->getMockBuilder('Composer\Config')
-                ->getMock();
+            ->getMockBuilder('Composer\Config')
+            ->getMock();
 
         // Mock Composer
         $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getConfig'])
-                  ->getMock();
+            ->getMockBuilder('Composer\Composer')
+            ->setMethods(['getConfig'])
+            ->getMock();
 
         $composer
             ->expects($this->once())
@@ -662,14 +630,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Event
         $event = $this
-               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
-               ->disableOriginalConstructor()
-               ->setMethods([
-                   'getProcessedUrl',
-                   'getRemoteFilesystem',
-                   'setRemoteFilesystem'
-               ])
-               ->getMock();
+            ->getMockBuilder('Composer\Plugin\CommandEvent')
+            ->disableOriginalConstructor()
+            ->setMethods([
+                'getInput',
+                'getOuput',
+                'getCommandName'
+            ])
+            ->getMock();
 
         $event
             ->expects($this->once())
@@ -710,10 +678,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a RemoteFilesystem
         $rfs = $this
-             ->getMockBuilder('Composer\Util\RemoteFilesystem')
-             ->disableOriginalConstructor()
-             ->setMethods(['getOptions', 'isTlsDisabled'])
-             ->getMock();
+            ->getMockBuilder('Composer\Util\RemoteFilesystem')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOptions', 'isTlsDisabled'])
+            ->getMock();
 
         $rfs
             ->expects($this->once())
@@ -727,14 +695,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock Config
         $config = $this
-                ->getMockBuilder('Composer\Config')
-                ->getMock();
+            ->getMockBuilder('Composer\Config')
+            ->getMock();
 
         // Mock Composer
         $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getConfig'])
-                  ->getMock();
+            ->getMockBuilder('Composer\Composer')
+            ->setMethods(['getConfig'])
+            ->getMock();
 
         $composer
             ->expects($this->once())
@@ -748,14 +716,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Event
         $event = $this
-               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
-               ->disableOriginalConstructor()
-               ->setMethods([
-                   'getProcessedUrl',
-                   'getRemoteFilesystem',
-                   'setRemoteFilesystem'
-               ])
-               ->getMock();
+            ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+            ->disableOriginalConstructor()
+            ->setMethods([
+                'getProcessedUrl',
+                'getRemoteFilesystem',
+                'setRemoteFilesystem'
+            ])
+            ->getMock();
 
         $event
             ->expects($this->once())
@@ -794,16 +762,16 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Make key available in the .env file
         file_put_contents(
-            getcwd().DIRECTORY_SEPARATOR.'.env',
+            getcwd() . DIRECTORY_SEPARATOR . '.env',
             self::KEY_ENV_VARIABLE . '=' . $key
         );
 
         // Mock a RemoteFilesystem
         $rfs = $this
-             ->getMockBuilder('Composer\Util\RemoteFilesystem')
-             ->disableOriginalConstructor()
-             ->setMethods(['getOptions', 'isTlsDisabled'])
-             ->getMock();
+            ->getMockBuilder('Composer\Util\RemoteFilesystem')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOptions', 'isTlsDisabled'])
+            ->getMock();
 
         $rfs
             ->expects($this->once())
@@ -817,14 +785,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock Config
         $config = $this
-                ->getMockBuilder('Composer\Config')
-                ->getMock();
+            ->getMockBuilder('Composer\Config')
+            ->getMock();
 
         // Mock Composer
         $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getConfig'])
-                  ->getMock();
+            ->getMockBuilder('Composer\Composer')
+            ->setMethods(['getConfig'])
+            ->getMock();
 
         $composer
             ->expects($this->once())
@@ -838,14 +806,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Event
         $event = $this
-               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
-               ->disableOriginalConstructor()
-               ->setMethods([
-                   'getProcessedUrl',
-                   'getRemoteFilesystem',
-                   'setRemoteFilesystem'
-               ])
-               ->getMock();
+            ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+            ->disableOriginalConstructor()
+            ->setMethods([
+                'getProcessedUrl',
+                'getRemoteFilesystem',
+                'setRemoteFilesystem'
+            ])
+            ->getMock();
 
         $event
             ->expects($this->once())
@@ -885,7 +853,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Make key available in the .env file
         file_put_contents(
-            getcwd().DIRECTORY_SEPARATOR.'.env',
+            getcwd() . DIRECTORY_SEPARATOR . '.env',
             self::KEY_ENV_VARIABLE . '=' . $fileKey
         );
 
@@ -894,10 +862,10 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a RemoteFilesystem
         $rfs = $this
-             ->getMockBuilder('Composer\Util\RemoteFilesystem')
-             ->disableOriginalConstructor()
-             ->setMethods(['getOptions', 'isTlsDisabled'])
-             ->getMock();
+            ->getMockBuilder('Composer\Util\RemoteFilesystem')
+            ->disableOriginalConstructor()
+            ->setMethods(['getOptions', 'isTlsDisabled'])
+            ->getMock();
 
         $rfs
             ->expects($this->once())
@@ -911,14 +879,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock Config
         $config = $this
-                ->getMockBuilder('Composer\Config')
-                ->getMock();
+            ->getMockBuilder('Composer\Config')
+            ->getMock();
 
         // Mock Composer
         $composer = $this
-                  ->getMockBuilder('Composer\Composer')
-                  ->setMethods(['getConfig'])
-                  ->getMock();
+            ->getMockBuilder('Composer\Composer')
+            ->setMethods(['getConfig'])
+            ->getMock();
 
         $composer
             ->expects($this->once())
@@ -932,14 +900,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Event
         $event = $this
-               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
-               ->disableOriginalConstructor()
-               ->setMethods([
-                   'getProcessedUrl',
-                   'getRemoteFilesystem',
-                   'setRemoteFilesystem'
-               ])
-               ->getMock();
+            ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+            ->disableOriginalConstructor()
+            ->setMethods([
+                'getProcessedUrl',
+                'getRemoteFilesystem',
+                'setRemoteFilesystem'
+            ])
+            ->getMock();
 
         $event
             ->expects($this->once())
@@ -981,19 +949,19 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock a RemoteFilesystem
         $rfs = $this
-             ->getMockBuilder('Composer\Util\RemoteFilesystem')
-             ->disableOriginalConstructor()
-             ->getMock();
+            ->getMockBuilder('Composer\Util\RemoteFilesystem')
+            ->disableOriginalConstructor()
+            ->getMock();
 
         // Mock an Event
         $event = $this
-               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
-               ->disableOriginalConstructor()
-               ->setMethods([
-                   'getProcessedUrl',
-                   'getRemoteFilesystem'
-               ])
-               ->getMock();
+            ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+            ->disableOriginalConstructor()
+            ->setMethods([
+                'getProcessedUrl',
+                'getRemoteFilesystem'
+            ])
+            ->getMock();
 
         $event
             ->expects($this->once())
@@ -1017,14 +985,14 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Event
         $event = $this
-               ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
-               ->disableOriginalConstructor()
-               ->setMethods([
-                   'getProcessedUrl',
-                   'getRemoteFilesystem',
-                   'setRemoteFilesystem'
-               ])
-               ->getMock();
+            ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+            ->disableOriginalConstructor()
+            ->setMethods([
+                'getProcessedUrl',
+                'getRemoteFilesystem',
+                'setRemoteFilesystem'
+            ])
+            ->getMock();
 
         $event
             ->expects($this->once())
