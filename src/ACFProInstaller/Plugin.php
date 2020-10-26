@@ -9,7 +9,7 @@ use Composer\IO\IOInterface;
 use Composer\Plugin\PluginEvents;
 use Composer\Plugin\PluginInterface;
 use Composer\Plugin\PreFileDownloadEvent;
-use Composer\Util\HttpDownloader;
+
 use Dotenv\Dotenv;
 use JezEmery\ACFProInstaller\Exceptions\MissingKeyException;
 
@@ -207,7 +207,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      *
      * @access protected
      * @return string The key from the environment
-     * @throws JezEmery\ACFProInstaller\Exceptions\MissingKeyException
+     * @throws MissingKeyException
      */
     protected function getKeyFromEnv()
     {
@@ -231,7 +231,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     protected function loadDotEnv()
     {
         if (file_exists(getcwd() . DIRECTORY_SEPARATOR . '.env')) {
-            $dotenv = new Dotenv(getcwd());
+            $dotenv = Dotenv::createImmutable(getcwd());
             $dotenv->load();
         }
     }
