@@ -1,4 +1,4 @@
-<?php namespace PhilippBaschke\ACFProInstaller;
+<?php namespace JezEmery\ACFProInstaller;
 
 use Composer\Composer;
 use Composer\DependencyResolver\Operation\OperationInterface;
@@ -9,8 +9,9 @@ use Composer\IO\IOInterface;
 use Composer\Plugin\PluginEvents;
 use Composer\Plugin\PluginInterface;
 use Composer\Plugin\PreFileDownloadEvent;
+
 use Dotenv\Dotenv;
-use PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException;
+use JezEmery\ACFProInstaller\Exceptions\MissingKeyException;
 
 /**
  * A composer plugin that makes installing ACF PRO possible
@@ -37,13 +38,13 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      * The name of the ACF PRO package
      */
     const ACF_PRO_PACKAGE_NAME =
-    'advanced-custom-fields/advanced-custom-fields-pro';
+        'advanced-custom-fields/advanced-custom-fields-pro';
 
     /**
      * The url where ACF PRO can be downloaded (without version and key)
      */
     const ACF_PRO_PACKAGE_URL =
-    'https://connect.advancedcustomfields.com/index.php?p=pro&a=download';
+        'https://connect.advancedcustomfields.com/index.php?p=pro&a=download';
 
     /**
      * @access protected
@@ -105,7 +106,6 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      *
      * @access public
      * @param PackageEvent $event The event that called the method
-     * @throws UnexpectedValueException
      */
     public function addVersion(PackageEvent $event)
     {
@@ -128,27 +128,14 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      * swap out the ACF PRO url with a url that contains the key.
      *
      * @access public
-     * @param PreFileDownloadEvent $event The event that called this method
-     * @throws MissingKeyException
+     * @param PreFileDownloadEvent $event
      */
     public function addKey(PreFileDownloadEvent $event)
     {
         $processedUrl = $event->getProcessedUrl();
 
         if ($this->isAcfProPackageUrl($processedUrl)) {
-            $rfs = $event->getRemoteFilesystem();
-            $acfRfs = new RemoteFilesystem(
-                $this->addParameterToUrl(
-                    $processedUrl,
-                    'k',
-                    $this->getKeyFromEnv()
-                ),
-                $this->io,
-                $this->composer->getConfig(),
-                $rfs->getOptions(),
-                $rfs->isTlsDisabled()
-            );
-            $event->setRemoteFilesystem($acfRfs);
+            $event->setProcessedUrl($this->addParameterToUrl($processedUrl, 'k', $this->getKeyFromEnv()));
         }
     }
 
@@ -163,7 +150,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      */
     protected function getPackageFromOperation(OperationInterface $operation)
     {
-        if ($operation->getJobType() === 'update') {
+        if ($operation->getOperationType() === 'update') {
             return $operation->getTargetPackage();
         }
         return $operation->getPackage();
@@ -184,7 +171,8 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     {
         // \A = start of string, \Z = end of string
         // See: http://stackoverflow.com/a/34994075
-        $major_minor_patch_optional = '/\A\d\.\d\.\d{1,2}(?:\.\d)?\Z/';
+        // Slight amendment added to allow for beta and alpha versions ( for testing purposes )
+        $major_minor_patch_optional = '/\A\d\.\d\.\d{1,2}(?:\.\d)?(\-)?(alpha|beta|rc|RC)?(\d)?\Z/';
 
         if (!preg_match($major_minor_patch_optional, $version)) {
             throw new \UnexpectedValueException(
@@ -219,7 +207,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      *
      * @access protected
      * @return string The key from the environment
-     * @throws PhilippBaschke\ACFProInstaller\Exceptions\MissingKeyException
+     * @throws MissingKeyException
      */
     protected function getKeyFromEnv()
     {
@@ -242,8 +230,8 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      */
     protected function loadDotEnv()
     {
-        if (file_exists(getcwd().DIRECTORY_SEPARATOR.'.env')) {
-            $dotenv = new Dotenv(getcwd());
+        if (file_exists(getcwd() . DIRECTORY_SEPARATOR . '.env')) {
+            $dotenv = Dotenv::createImmutable(getcwd());
             $dotenv->load();
         }
     }
@@ -286,5 +274,21 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         // e.g. &t=1.2.3 in example.com?p=index.php&t=1.2.3&k=key
         $pattern = "/(&$parameter=[^&]*)/";
         return preg_replace($pattern, '', $url);
+    }
+
+    /**
+     * @param Composer $composer
+     * @param IOInterface $io
+     */
+    public function deactivate(Composer $composer, IOInterface $io)
+    {
+    }
+
+    /**
+     * @param Composer $composer
+     * @param IOInterface $io
+     */
+    public function uninstall(Composer $composer, IOInterface $io)
+    {
     }
 }

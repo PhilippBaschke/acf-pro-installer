@@ -8,3 +8,6 @@ vendor
 # phpunit code coverage report
 coverage
 build/logs/clover.xml
+
+# ide config files
+.idea
