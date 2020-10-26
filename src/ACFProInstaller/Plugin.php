@@ -128,7 +128,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      * swap out the ACF PRO url with a url that contains the key.
      *
      * @access public
-     * @param PreFileDownloadEvent $event The event that called this method
+     * @param PreFileDownloadEvent $event
      */
     public function addKey(PreFileDownloadEvent $event)
     {
@@ -136,7 +136,9 @@ class Plugin implements PluginInterface, EventSubscriberInterface
 
         if ($this->isAcfProPackageUrl($processedUrl)) {
             $dl = new HttpDownloader($this->io, $this->composer->getConfig());
-            $dl->add($this->addParameterToUrl($processedUrl, 'k', $this->getKeyFromEnv()));
+            $dl->get($this->addParameterToUrl($processedUrl, 'k', $this->getKeyFromEnv()));
+
+            $event->setProcessedUrl($this->addParameterToUrl($processedUrl, 'k', $this->getKeyFromEnv()));
         }
     }
 
@@ -280,20 +282,16 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     /**
      * @param Composer $composer
      * @param IOInterface $io
-     * @return mixed
      */
     public function deactivate(Composer $composer, IOInterface $io)
     {
-        // TODO: Implement deactivate() method.
     }
 
     /**
      * @param Composer $composer
      * @param IOInterface $io
-     * @return mixed
      */
     public function uninstall(Composer $composer, IOInterface $io)
     {
-        // TODO: Implement uninstall() method.
     }
 }
