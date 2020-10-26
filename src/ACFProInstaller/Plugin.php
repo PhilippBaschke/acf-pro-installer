@@ -135,9 +135,6 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         $processedUrl = $event->getProcessedUrl();
 
         if ($this->isAcfProPackageUrl($processedUrl)) {
-            $dl = new HttpDownloader($this->io, $this->composer->getConfig());
-            $dl->get($this->addParameterToUrl($processedUrl, 'k', $this->getKeyFromEnv()));
-
             $event->setProcessedUrl($this->addParameterToUrl($processedUrl, 'k', $this->getKeyFromEnv()));
         }
     }

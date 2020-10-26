@@ -77,7 +77,7 @@ class PluginTest extends \PHPUnit_Framework_TestCase
     {
         $subscribedEvents = Plugin::getSubscribedEvents();
         $this->assertEquals(
-            $subscribedEvents[PluginEvents::PRE_FILE_DOWNLOAD],
+            $subscribedEvents[PluginEvents::COMMAND],
             'addKey'
         );
     }
@@ -630,12 +630,12 @@ class PluginTest extends \PHPUnit_Framework_TestCase
 
         // Mock an Event
         $event = $this
-            ->getMockBuilder('Composer\Plugin\PreFileDownloadEvent')
+            ->getMockBuilder('Composer\Plugin\CommandEvent')
             ->disableOriginalConstructor()
             ->setMethods([
-                'getProcessedUrl',
-                'getRemoteFilesystem',
-                'setRemoteFilesystem'
+                'getInput',
+                'getOuput',
+                'getCommandName'
             ])
             ->getMock();
 

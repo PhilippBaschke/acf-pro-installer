@@ -26,7 +26,8 @@
     "psr-4": { "JezEmery\\ACFProInstaller\\": "src/ACFProInstaller" }
   },
   "extra": {
-    "class": "JezEmery\\ACFProInstaller\\Plugin"
+    "class": "JezEmery\\ACFProInstaller\\Plugin",
+    "plugin-modifies-downloads": true
   },
   "scripts": {
     "lint": "phpcs src tests --standard=PSR2",
