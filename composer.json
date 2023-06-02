@@ -1,5 +1,5 @@
 {
-  "name": "philippbaschke/acf-pro-installer",
+  "name": "CallumK-Enigma/acf-pro-installer",
   "description": "An install helper for Advanced Custom Fields PRO",
   "type": "composer-plugin",
   "license": "MIT",
@@ -7,6 +7,10 @@
     {
       "name": "Philipp Baschke",
       "email": "philipp@baschke.com"
+    },
+    {
+      "name": "Callum Kendall",
+      "email": "callumk@enigma-interactive.co.uk"      
     }
   ],
   "keywords": [
@@ -15,7 +19,7 @@
   "require": {
     "php": ">=5.5",
     "composer-plugin-api": "^1.0",
-    "vlucas/phpdotenv": "^2.2"
+    "vlucas/phpdotenv": "^3.0"
   },
   "require-dev": {
     "composer/composer": "1.0.*",
@@ -24,10 +28,10 @@
     "satooshi/php-coveralls": "1.*"
   },
   "autoload": {
-    "psr-4": { "PhilippBaschke\\ACFProInstaller\\": "src/ACFProInstaller" }
+    "psr-4": { "CallumK-Enigma\\ACFProInstaller\\": "src/ACFProInstaller" }
   },
   "extra": {
-    "class": "PhilippBaschke\\ACFProInstaller\\Plugin"
+    "class": "CallumK-Enigma\\ACFProInstaller\\Plugin"
   },
   "scripts": {
     "lint": "phpcs src tests --standard=PSR2",
